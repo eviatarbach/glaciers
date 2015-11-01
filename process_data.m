@@ -1,3 +1,8 @@
+if (exist('OCTAVE_VERSION', 'builtin') ~= 0)  % If running Octave. Octave doesn't work yet though.
+    pkg load io;
+    pkg load mapping;
+end
+
 regions_thickness = {'alaska', 'westerncanada', 'arcticcanadaN',...
                      'arcticcanadaS', 'greenland', 'iceland',...
                      'svalbard', 'scandinavia', 'russianarctic',...
@@ -43,7 +48,8 @@ for i = 1:length(regions_rgi)
     in_rgi = ismember(d{1,1}, glaciers);   % glaciers in thickness data
                                            % that are present in the RGI
     nonzero_height = d{1,6} > 0;
-    glacier_mask = in_rgi & nonzero_height;
+    nonzero_length = d{1,11} > 0;
+    glacier_mask = in_rgi & nonzero_height & nonzero_length;
 
     Regions.(regions_rgi{i}).('id') = d{1,1}(glacier_mask);
     Regions.(regions_rgi{i}).('heights') = d{1,6}(glacier_mask)/1000;  % mean thickness in km
