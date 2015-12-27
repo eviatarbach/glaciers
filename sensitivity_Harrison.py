@@ -1,5 +1,6 @@
 import math
 import numpy
+import mpmath
 import matplotlib.pyplot as plt
 import scipy.interpolate
 import scipy.integrate
@@ -14,36 +15,28 @@ RGI_REGIONS = ['Alaska', 'WesternCanadaUS','ArcticCanadaNorth',
 
 mat = loadmat('data.mat')['Regions']
 
-for region_name in RGI_REGIONS:
-    region = mat[region_name]
+region = mat['NorthAsia']
 
-    AAR = 0.6
+AAR = 0.6
 
-    volumes = region['volumes']
-    heights = region['heights']
-    lengths = region['lengths']
-    slopes = region['slopes']
+volumes = region['volumes']
+heights = region['heights']
+lengths = region['lengths']
+slopes = region['slopes']
 
-    zela = heights - AAR*lengths*numpy.tan(slopes)
-    P = 1 - zela/heights
+zela = heights - AAR*lengths*numpy.tan(slopes)
+P = 1 - zela/heights
 
-    volume_sum = math.fsum(volumes)
+hist, bins_height, bins_P = numpy.histogram2d(heights, P, bins=(50, 50), normed=True)
 
-    hist, bins, _ = plt.hist(P, bins=100, normed=True)
-    centred = (bins[:-1] + bins[1:])/2
-    spline = scipy.interpolate.interp1d(centred, hist, kind='cubic')
-    x = numpy.linspace(centred[0], centred[-1], 1000)
-    plt.plot(x, spline(x))
+centred_height = (bins_height[:-1] + bins_height[1:])/2
+centred_P = (bins_P[:-1] + bins_P[1:])/2
 
-    threshold_P = 10
+spline = scipy.interpolate.interp2d(centred_height, centred_P, hist, kind='cubic')
+spline_func = lambda H, P: float(spline(float(H), float(P)))  # needed to avoid casting errors
+spline_diff = lambda H, P: mpmath.diff(spline_func, (H, P), (0, 1), h=1e-6)
 
-    for i, val in enumerate(centred):
-        if val > threshold_P:
-            last_index = i - 1
-            last_val = centred[i - 1]
-            break
+mpmath.dps = 100
+integral = -mpmath.quadts(lambda H, P: spline_func(H, P)/H + (P/H)*spline_diff(H, P), (bins_height[0], bins_height[-1]), (bins_P[0] if bins_P[0] > 0 else 0, bins_P[-1]))
 
-    integral = scipy.integrate.romberg(lambda p: len(P)*p*spline(p), centred[0], last_val, divmax=100)
-    s = sum(filter(lambda p: p > last_val, P))
-
-    print((integral + s - sum(P))/sum(P))
+print(integral)
