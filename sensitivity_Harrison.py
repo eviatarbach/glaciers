@@ -27,16 +27,22 @@ slopes = region['slopes']
 zela = heights - AAR*lengths*numpy.tan(slopes)
 P = 1 - zela/heights
 
-hist, bins_height, bins_P = numpy.histogram2d(heights, P, bins=(50, 50), normed=True)
+hist_H, bins_H, _ = plt.hist(heights, bins=100, normed=True)
+centred_H = (bins_H[:-1] + bins_H[1:])/2
 
-centred_height = (bins_height[:-1] + bins_height[1:])/2
-centred_P = (bins_P[:-1] + bins_P[1:])/2
+spline_H = scipy.interpolate.interp1d(centred_H, hist_H, kind='cubic')
 
-spline = scipy.interpolate.interp2d(centred_height, centred_P, hist, kind='cubic')
-spline_func = lambda H, P: float(spline(float(H), float(P)))  # needed to avoid casting errors
-spline_diff = lambda H, P: mpmath.diff(spline_func, (H, P), (0, 1), h=1e-6)
+hist_z, bins_z, _ = plt.hist(zela, bins=100, normed=True)
+centred_z = (bins_z[:-1] + bins_z[1:])/2
 
-mpmath.dps = 100
-integral = -mpmath.quadts(lambda H, P: spline_func(H, P)/H + (P/H)*spline_diff(H, P), (bins_height[0], bins_height[-1]), (bins_P[0] if bins_P[0] > 0 else 0, bins_P[-1]))
+spline_z = scipy.interpolate.interp1d(centred_z, hist_z, kind='cubic')
 
-print(integral)
+integral1 = mpmath.quad(lambda H: float(spline_H(float(H)))/H, (centred_H[0], centred_H[-1]))
+
+spline_diff = lambda z: mpmath.diff(lambda z: float(spline_z(float(z))), z, h=1e-6)
+
+integral2 = mpmath.quad(lambda z: spline_diff(z), (centred_z[0] + 1e-6, centred_z[-1] - 1e-6))
+
+integral3 = mpmath.quad(lambda z: spline_diff(z)*z, (centred_z[0] + 1e-6, centred_z[-1] - 1e-6))
+
+integral = -integral1 + integral2 - integral1*integral3
