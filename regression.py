@@ -34,6 +34,8 @@ data_latlon = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-A-GENERAL-I
 
 glaciers[['lat', 'lon']] = data_latlon.loc[names]
 
+data = data.sort_index(level=[0, 1])
+
 # Calculate average mass balance gradients
 for glacier in names:
     gradients = []
@@ -71,9 +73,15 @@ for glacier in names:
     grid_square_temps = grid_square_temps[grid_square_temps[:, 0] != NETCDF_FILL_VALUE, :]
 
     # Check for at least 10 years of data
-    if grid_square_temps.shape[0] >= 10:
-        continentality = grid_square_temps.max(axis=1).mean() - grid_square_temps.min(axis=1).mean()
+    if grid_square_temps.shape[0] >= 20:
+        continentality = grid_square_temps[-20:, :].max(axis=1).mean() - grid_square_temps[-20:, :].min(axis=1).mean()
         glaciers.loc[glacier, 'continentality'] = continentality
+
+        if glaciers.loc[glacier, 'lat'] > 0:  # Northern Hemisphere, use June, July, August
+            mean_summer_temp = grid_square_temps[-20:, 5:8].mean()
+        else:  # Southern Hemisphere, use December, January, February
+            mean_summer_temp = grid_square_temps[-20:, [0, 1, 11]].mean()
+        glaciers.loc[glacier, 'summer temperature'] = mean_summer_temp
 
     grid_square_pre = pre[:, glacier_lat_index, glacier_lon_index].reshape([len(years)/12, 12])
 
@@ -81,6 +89,12 @@ for glacier in names:
     grid_square_pre = grid_square_pre[grid_square_pre[:, 0] != NETCDF_FILL_VALUE, :]
 
     # Check for at least 10 years of data
-    if grid_square_pre.shape[0] >= 10:
-        mean_pre = grid_square_pre.sum(axis=1).mean()
+    if grid_square_pre.shape[0] >= 20:
+        mean_pre = grid_square_pre[-20:, :].sum(axis=1).mean()
         glaciers.loc[glacier, 'precipitation'] = mean_pre
+
+        if glaciers.loc[glacier, 'lat'] > 0:  # Northern Hemisphere, use December, January, February
+            mean_winter_pre = grid_square_pre[-20:, [0, 1, 11]].mean()
+        else:  # Southern Hemisphere, use June, July, August
+            mean_winter_pre = grid_square_pre[-20:, 5:8].mean()
+        glaciers.loc[glacier, 'winter precipitation'] = mean_winter_pre
