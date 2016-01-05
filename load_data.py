@@ -6,9 +6,6 @@ import pandas
 import numpy
 import scipy.io.netcdf as netcdf
 
-# Used for missing values in NetCDF
-NETCDF_FILL_VALUE = 9.969209968386869e+36
-
 data = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv',
                        usecols=['WGMS_ID', 'YEAR', 'LOWER_BOUND', 'UPPER_BOUND',
                                 'ANNUAL_BALANCE'],
@@ -32,7 +29,14 @@ data_latlon = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-A-GENERAL-I
                               usecols=['WGMS_ID', 'LATITUDE', 'LONGITUDE'],
                               index_col='WGMS_ID', encoding='ISO-8859-1')
 
+data_elevation = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-B-STATE.csv',
+                                 usecols=['WGMS_ID', 'YEAR', 'HIGHEST_ELEVATION', 'MEDIAN_ELEVATION'],
+                                 index_col=['WGMS_ID', 'YEAR'], encoding='ISO-8859-1')
+data_elevation = data_elevation.dropna().groupby(level=0).mean()
+
 glaciers[['lat', 'lon']] = data_latlon.loc[names]
+
+glaciers[['max_elevation', 'median_elevation']] = data_elevation.loc[names]
 
 data = data.sort_index(level=[0, 1])
 
@@ -51,12 +55,17 @@ for glacier in names:
 
 temp_data = netcdf.netcdf_file('cru_ts3.23.1901.2014.tmp.dat.nc', 'r')
 pre_data = netcdf.netcdf_file('cru_ts3.23.1901.2014.pre.dat.nc', 'r')
+cld_data = netcdf.netcdf_file('cru_ts3.23.1901.2014.cld.dat.nc', 'r')
 
 lat = numpy.array(list(temp_data.variables['lat']))
 lon = numpy.array(list(temp_data.variables['lon']))
-temp = temp_data.variables['tmp']
 
+temp = temp_data.variables['tmp']
 pre = pre_data.variables['pre']
+cld = cld_data.variables['cld']
+
+fill_value = temp.missing_value
+assert(fill_value == pre.missing_value == cld.missing_value)
 
 days = numpy.array(list(temp_data.variables['time']))
 start = datetime.date(1900, 1, 1)  # dates are measured from here
@@ -70,9 +79,9 @@ for glacier in names:
     grid_square_temps = temp[:, glacier_lat_index, glacier_lon_index].reshape([len(years)/12, 12])
 
     # Get rid of all years with missing data
-    grid_square_temps = grid_square_temps[grid_square_temps[:, 0] != NETCDF_FILL_VALUE, :]
+    grid_square_temps = grid_square_temps[grid_square_temps[:, 0] != fill_value, :]
 
-    # Check for at least 10 years of data
+    # Check for at least 20 years of data
     if grid_square_temps.shape[0] >= 20:
         continentality = grid_square_temps[-20:, :].max(axis=1).mean() - grid_square_temps[-20:, :].min(axis=1).mean()
         glaciers.loc[glacier, 'continentality'] = continentality
@@ -81,14 +90,14 @@ for glacier in names:
             mean_summer_temp = grid_square_temps[-20:, 5:8].mean()
         else:  # Southern Hemisphere, use December, January, February
             mean_summer_temp = grid_square_temps[-20:, [0, 1, 11]].mean()
-        glaciers.loc[glacier, 'summer temperature'] = mean_summer_temp
+        glaciers.loc[glacier, 'summer_temperature'] = mean_summer_temp
 
     grid_square_pre = pre[:, glacier_lat_index, glacier_lon_index].reshape([len(years)/12, 12])
 
     # Get rid of all years with missing data
-    grid_square_pre = grid_square_pre[grid_square_pre[:, 0] != NETCDF_FILL_VALUE, :]
+    grid_square_pre = grid_square_pre[grid_square_pre[:, 0] != fill_value, :]
 
-    # Check for at least 10 years of data
+    # Check for at least 20 years of data
     if grid_square_pre.shape[0] >= 20:
         mean_pre = grid_square_pre[-20:, :].sum(axis=1).mean()
         glaciers.loc[glacier, 'precipitation'] = mean_pre
@@ -97,4 +106,16 @@ for glacier in names:
             mean_winter_pre = grid_square_pre[-20:, [0, 1, 11]].mean()
         else:  # Southern Hemisphere, use June, July, August
             mean_winter_pre = grid_square_pre[-20:, 5:8].mean()
-        glaciers.loc[glacier, 'winter precipitation'] = mean_winter_pre
+        glaciers.loc[glacier, 'winter_precipitation'] = mean_winter_pre
+
+    grid_square_cld = cld[:, glacier_lat_index, glacier_lon_index].reshape([len(years)/12, 12])
+
+    # Get rid of all years with missing data
+    grid_square_cld = grid_square_cld[grid_square_cld[:, 0] != fill_value, :]
+
+    # Check for at least 20 years of data
+    if grid_square_cld.shape[0] >= 20:
+        mean_cld = grid_square_cld[-20:, :].mean()
+        glaciers.loc[glacier, 'cloud_cover'] = mean_cld
+
+glaciers.to_pickle('glaciers')
