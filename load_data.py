@@ -6,24 +6,48 @@ import pandas
 import numpy
 import scipy.io.netcdf as netcdf
 
-data = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv',
-                       usecols=['WGMS_ID', 'YEAR', 'LOWER_BOUND', 'UPPER_BOUND',
-                                'ANNUAL_BALANCE'],
-                       index_col=['WGMS_ID', 'YEAR'],
-                       encoding='ISO-8859-1')
+def closest_index_in_range(lower, upper, step, value):
+    '''
+    Find the index of the closest value to `value` in the range
+    [lower, lower + step, ..., upper - step, upper] in constant time. `upper`
+    must be greater than `lower`. If `value` is outside the range, return the
+    corresponding boundary index (0 or the last index). When two values are
+    equally close, the index of the smaller is returned.
+    '''
+    if value >= upper:
+        return int((upper - lower)/step)
+    elif value < lower:
+        return 0
 
-data['ALTITUDE'] = (data['LOWER_BOUND'] + data['UPPER_BOUND'])/2
+    value = value - lower
+    upper = upper - lower
+    lower = 0
 
-data = data.drop(['LOWER_BOUND', 'UPPER_BOUND'], axis=1)
+    index = int(value//step + 1)
+
+    if step*index - value >= value - step*(index - 1):
+        index -= 1
+
+    return index
+
+data_mb = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv',
+                          usecols=['WGMS_ID', 'YEAR', 'LOWER_BOUND', 'UPPER_BOUND',
+                                   'ANNUAL_BALANCE'],
+                          index_col=['WGMS_ID', 'YEAR'],
+                          encoding='ISO-8859-1')
+
+data_mb['ALTITUDE'] = (data_mb['LOWER_BOUND'] + data_mb['UPPER_BOUND'])/2
+
+data_mb = data_mb.drop(['LOWER_BOUND', 'UPPER_BOUND'], axis=1)
 
 # Only use mass balance data by altitude band
-data = data[data['ALTITUDE'] != 9999]
-data = data.dropna()
+data_mb = data_mb[data_mb['ALTITUDE'] != 9999]
+data_mb = data_mb.dropna()
 
-names = data.index.get_level_values('WGMS_ID').unique()
+names = data_mb.index.get_level_values('WGMS_ID').unique()
 
-glaciers = pandas.DataFrame({'WGMS ID': names})
-glaciers = glaciers.set_index('WGMS ID')
+glaciers = pandas.DataFrame({'WGMS_ID': names})
+glaciers = glaciers.set_index('WGMS_ID')
 
 data_latlon = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-A-GENERAL-INFORMATION.csv',
                               usecols=['WGMS_ID', 'LATITUDE', 'LONGITUDE'],
@@ -38,20 +62,65 @@ glaciers[['lat', 'lon']] = data_latlon.loc[names]
 
 glaciers[['max_elevation', 'median_elevation']] = data_elevation.loc[names]
 
-data = data.sort_index(level=[0, 1])
+data_mb = data_mb.sort_index(level=[0, 1])
+
+data_ela = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-E-MASS-BALANCE-OVERVIEW.csv',
+                           usecols=['WGMS_ID', 'YEAR', 'ELA_PREFIX', 'ELA'],
+                           index_col=['WGMS_ID', 'YEAR'], encoding='ISO-8859-1')
+
+data_ela = data_ela.sort_index(level=[0, 1])
+
+#data_ela = data_ela.dropna(subset=['ELA'])
+
+# Want only rows where ELA_PREFIX is NaN; otherwise, this means that the ELA is
+# above or below the entire glacier
+data_ela = data_ela[data_ela['ELA_PREFIX'].isnull()]
+
+data_mb['ela'] = data_ela['ELA']
+data_mb = data_mb.dropna()
 
 # Calculate average mass balance gradients
 for glacier in names:
     gradients = []
-    for year in data.loc[glacier].index.unique():
-        array = data.loc[glacier, year].values
+    gradients2 = []
+    gradients3 = []
+    for year in data_mb.loc[glacier].index.unique():
+        # Gradient using slope of linear regression
+        array = data_mb.loc[glacier, year][['ANNUAL_BALANCE', 'ALTITUDE']].values
         altitudes = numpy.hstack([numpy.ones([array.shape[0], 1]), array[:, 1:]])
         balance = array[:, 0:1]
 
-        # Linear regression, g is the slope
         g = numpy.linalg.lstsq(altitudes, balance)[0][1]
         gradients.append(g)
+
+        # Gradient around ELA
+        ela = data_mb.loc[glacier, year]['ela'].iloc[0]
+
+        if array[0, 1] < ela < array[-1, 1]:
+            ela_i = bisect.bisect(array[:, 1:], ela)
+
+            y2 = array[ela_i - 1:ela_i + 1, 1][1]
+            y1 = array[ela_i - 1:ela_i + 1, 1][0]
+
+            mb2 = array[ela_i - 1:ela_i + 1, 0][1]
+            mb1 = array[ela_i - 1:ela_i + 1, 0][0]
+
+            g2 = (mb2 - mb1)/(y2 - y1)
+            gradients2.append(g2)
+
+        # Average gradient from lowest and highest altitude
+        y2 = array[-1, 1]
+        y1 = array[0, 1]
+
+        mb2 = array[-1, 0]
+        mb1 = array[0, 0]
+
+        g3 = (mb2 - mb1)/(y2 - y1)
+        gradients3.append(g3)
+
     glaciers.loc[glacier, 'g'] = numpy.mean(gradients)
+    glaciers.loc[glacier, 'g2'] = numpy.mean(gradients2)
+    glaciers.loc[glacier, 'g3'] = numpy.mean(gradients3)
 
 temp_data = netcdf.netcdf_file('cru_ts3.23.1901.2014.tmp.dat.nc', 'r')
 pre_data = netcdf.netcdf_file('cru_ts3.23.1901.2014.pre.dat.nc', 'r')
@@ -72,9 +141,8 @@ start = datetime.date(1900, 1, 1)  # dates are measured from here
 years = list(map(lambda d: (start + datetime.timedelta(days=d)).year, days))
 
 for glacier in names:
-    # TODO: this can easily be done in constant time
-    glacier_lat_index = bisect.bisect(lat, glaciers.loc[glacier, 'lat'])
-    glacier_lon_index = bisect.bisect(lon, glaciers.loc[glacier, 'lon'])
+    glacier_lat_index = closest_index_in_range(-89.75, 89.75, 0.5, glaciers.loc[glacier, 'lat'])
+    glacier_lon_index = closest_index_in_range(-179.75, 179.75, 0.5, glaciers.loc[glacier, 'lon'])
 
     grid_square_temps = temp[:, glacier_lat_index, glacier_lon_index].reshape([len(years)/12, 12])
 
@@ -118,4 +186,5 @@ for glacier in names:
         mean_cld = grid_square_cld[-20:, :].mean()
         glaciers.loc[glacier, 'cloud_cover'] = mean_cld
 
+glaciers = glaciers.dropna()
 glaciers.to_pickle('glaciers')
