@@ -70,7 +70,7 @@ data_ela = pandas.read_csv('DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-E-MASS-BALANCE
 
 data_ela = data_ela.sort_index(level=[0, 1])
 
-#data_ela = data_ela.dropna(subset=['ELA'])
+data_ela = data_ela.dropna(subset=['ELA'])
 
 # Want only rows where ELA_PREFIX is NaN; otherwise, this means that the ELA is
 # above or below the entire glacier

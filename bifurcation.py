@@ -45,11 +45,11 @@ PC['EQ2'].backward()
 PC.display(['P','V'], stability=True, figure=3, points=False)        # stable and unstable branches as solid and dashed curves, resp.
 
 import matplotlib
-matplotlib.rc('text', usetex = True)
+matplotlib.rc('text', usetex=True)
 plt.figure(3)
 plt.plot([0.12, 0.19], [0, 0], 'black')
 plt.xlabel('$P^*$', fontsize=16)
-plt.ylabel('$V^*$', fontsize=16)
+plt.ylabel('$V^*$', fontsize=16, rotation=0)
 plt.title('')
 ax = plt.gca()
 ax.spines["top"].set_visible(False)
