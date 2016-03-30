@@ -186,5 +186,5 @@ for glacier in names:
         mean_cld = grid_square_cld[-20:, :].mean()
         glaciers.loc[glacier, 'cloud_cover'] = mean_cld
 
-glaciers = glaciers.dropna()
+#glaciers = glaciers.dropna()
 glaciers.to_pickle('glaciers')
