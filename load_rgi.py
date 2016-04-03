@@ -4,6 +4,7 @@ import re
 import numpy
 import pandas
 import geopandas
+import geopy
 
 # TODO: what to do with Alaska?
 
@@ -51,6 +52,9 @@ for i, region in enumerate(regions_rgi):
     region_data['Thickness'] = thick_data['THICK_mean']/1000
     region_data[['Location_x', 'Location_y', 'area', 'volume', 'THICK_mean', 'THICK_max', 'ELEV_min', 'ELEV_max', 'ELEV_med', 'LENGTH', 'SLOPE_avg', 'SLOPE_band']] = thick_data[['Location_x', 'Location_y', 'area', 'volume', 'THICK_mean', 'THICK_max', 'ELEV_min', 'ELEV_max', 'ELEV_med', 'LENGTH', 'SLOPE_avg', 'SLOPE_band']]
 
+    # remove glaciers with unknown slope (-9 in RGI)
+    region_data = region_data[region_data['Slope'] > 0]
+
     # convert to radians
     region_data['Slope'] *= numpy.pi/180
 
@@ -60,12 +64,20 @@ for i, region in enumerate(regions_rgi):
     # remove tidewater glaciers, ones that have minimum altitude of 0
     region_data = region_data[region_data['Zmin'] > 0]
 
+    # remove glaciers with quantities of 0
+    region_data = region_data[region_data['volume'] > 0]
+    region_data = region_data[region_data['LENGTH'] > 0]
+    region_data = region_data[region_data['SLOPE_avg'] > 0]
+
     region_data = region_data.reset_index()
     region_data = region_data.set_index(['Region', 'RGIId'])
 
     all_regions.append(region_data)
 
-all_glaciers = pandas.concat(all_regions)
+all_glaciers = pandas.concat(all_regions).dropna()
+all_glaciers = all_glaciers.drop('LowLatitudes')
+
+pickle.dump(all_glaciers, open('all_glaciers.p', 'wb'))
 
 # Load slope and aspect data into WGMS data
 data = data.set_index(['RGIId'])
