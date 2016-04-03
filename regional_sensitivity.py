@@ -78,19 +78,19 @@ for i, region_name in enumerate(RGI_REGIONS[1:]):
 
     sensitivity_AAR = []
 
-    for AAR in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+    for AAR in [0.6, 0.6]:
         zela = heights - AAR*lengths*numpy.tan(slopes)
 
         cl = volumes/(lengths**q)
         ca = volumes/(areas**gamma)
         cw = (ca/cl)**(1/(q - gamma))
 
-        Ldim = ((2*cl**((a + 2)/q)*cw**a)/slopes)**(q/(3*(a - q + 2)))
+        Ldim = ((2*cl**((a + 2)/q)*cw**a)/(slopes*numpy.cos(slopes)))**(q/(3*(a - q + 2)))
 
         zela_nd = zela/Ldim
         cl_nd = cl*Ldim**(q - 3)
 
-        P = (2*zela_nd*cl_nd**(1/q))/slopes
+        P = (2*zela_nd*cl_nd**(1/q))/(slopes*numpy.cos(slopes))
 
         '''indices = numpy.where((-2.53 > P) & (P > -2583))
         print(sum(~((-2.53 > P) & (P > -2583))), len(P))
