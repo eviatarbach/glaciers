@@ -9,6 +9,9 @@ import statsmodels.api as sm
 
 glaciers = pickle.load(open('glaciers', 'br')).dropna()
 
+# Mass-balance gradient cannot be negative
+glaciers = glaciers[glaciers['g'] > 0]
+
 def powerset(iterable):
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iterable)

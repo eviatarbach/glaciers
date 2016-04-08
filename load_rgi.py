@@ -52,6 +52,19 @@ for i, region in enumerate(regions_rgi):
     region_data['Thickness'] = thick_data['THICK_mean']/1000
     region_data[['Location_x', 'Location_y', 'area', 'volume', 'THICK_mean', 'THICK_max', 'ELEV_min', 'ELEV_max', 'ELEV_med', 'LENGTH', 'SLOPE_avg', 'SLOPE_band']] = thick_data[['Location_x', 'Location_y', 'area', 'volume', 'THICK_mean', 'THICK_max', 'ELEV_min', 'ELEV_max', 'ELEV_med', 'LENGTH', 'SLOPE_avg', 'SLOPE_band']]
 
+    hypso_data = pandas.read_csv('{num}_rgi50_{name}/{num}_rgi50_{name}_hypso.csv'.format(num=str(i + 1).zfill(2), name=region))
+
+    hypso_data['RGIId   '] = hypso_data['RGIId   '].str[-5:]
+    hypso_data = hypso_data.set_index('RGIId   ')
+    
+    altitudes = numpy.array(list(map(numpy.float, hypso_data.columns[2:])))
+
+    # hypsometric maximum
+    region_data['ELA'] = altitudes[numpy.argmax(hypso_data.values[:, 2:], axis=1)]
+
+    # remove glaciers with no hypsometry data (-9 in RGI)
+    region_data = region_data[~(hypso_data.values[:, 2:] < 0).any(axis=1)]
+
     # remove glaciers with unknown slope (-9 in RGI)
     region_data = region_data[region_data['Slope'] > 0]
 

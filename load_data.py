@@ -171,9 +171,9 @@ for glacier in names:
         glaciers.loc[glacier, 'precipitation'] = mean_pre
 
         if glaciers.loc[glacier, 'lat'] > 0:  # Northern Hemisphere, use December, January, February
-            mean_winter_pre = grid_square_pre[-20:, [0, 1, 11]].mean()
+            mean_winter_pre = grid_square_pre[-20:, [0, 1, 11]].sum(axis=1).mean()
         else:  # Southern Hemisphere, use June, July, August
-            mean_winter_pre = grid_square_pre[-20:, 5:8].mean()
+            mean_winter_pre = grid_square_pre[-20:, 5:8].sum(axis=1).mean()
         glaciers.loc[glacier, 'winter_precipitation'] = mean_winter_pre
 
     grid_square_cld = cld[:, glacier_lat_index, glacier_lon_index].reshape([len(years)/12, 12])
