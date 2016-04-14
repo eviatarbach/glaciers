@@ -7,7 +7,7 @@ import scipy.interpolate
 # we must give a name
 DSargs = dst.args(name='Block model with scaling')
 # parameters
-DSargs.pars = {'g': 1, 'P': 0.1859, 'alpha': 8/11., 'beta': 13/11.}
+DSargs.pars = {'g': 1, 'P': 0.3849, 'alpha': 4/5., 'beta': 7/5.}
 # rhs of the differential equation
 DSargs.varspecs = {'V': 'g*(-V^(alpha)*P - V^(beta) + V)',
                    'w': 'V-w' }
@@ -16,8 +16,8 @@ DSargs.ics = {'V': 0, 'w': 0 }
 
 ode  = dst.Generator.Vode_ODEsystem(DSargs)
 
-ode.set(pars={'P': 0.1859})
-ode.set(ics={'V': 0.0602326})
+ode.set(pars={'P': 0.3849})
+ode.set(ics={'V': 0.06415003})
 
 PC = dst.ContClass(ode)            # Set up continuation class
 
@@ -33,8 +33,8 @@ PC['EQ1'].forward()
 
 curve = PC['EQ1'].curve
 
-P = curve[:, 2][curve[:, 0] >= 0.0602326]
-V = curve[:, 0][curve[:, 0] >= 0.0602326]
+P = curve[:, 2][curve[:, 0] >= 0.06415003]
+V = curve[:, 0][curve[:, 0] >= 0.06415003]
 
 f1 = scipy.interpolate.interp1d(P, V)
 
@@ -50,23 +50,23 @@ PC['EQ2'].forward()
 
 curve2 = PC['EQ2'].curve
 
-P2 = curve2[:, 2][curve2[:, 0] >= 0.0602326]
-V2 = curve2[:, 0][curve2[:, 0] >= 0.0602326]
+P2 = curve2[:, 2][curve2[:, 0] >= 0.06415003]
+V2 = curve2[:, 0][curve2[:, 0] >= 0.06415003]
 
 f2 = scipy.interpolate.interp1d(P2, V2)
 
-alpha = 8/11
-beta = 13/11
+alpha = 4/5.
+beta = 7/5.
 def F(P, V): return -V**(alpha)*P - V**(beta) + V
 
 def f(P):
-    if P > -2.526:
+    if -8.16 <= P <= 0.3849:
         return f2(P)
-    elif P > -300.01:
+    elif -2119 <= P <= -8.837:
         return f1(P)
     else:
-        roots = numpy.roots([-1, 0, 1, 0, 0, -P, 0, 0, 0, 0, 0, 0, 0, 0])
-        return roots[numpy.nonzero(numpy.logical_and(numpy.isreal(roots), roots != 0))].real**11
+        roots = numpy.roots([-1, 0, 1, -P, 0, 0, 0, 0])
+        return roots[numpy.nonzero(numpy.logical_and(numpy.isreal(roots), roots != 0))].real**5
 
 f_vec = numpy.vectorize(f)
 

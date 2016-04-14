@@ -1,15 +1,15 @@
 import numpy
 import matplotlib.pyplot as plt
 
-params = numpy.vstack([6/125*numpy.sqrt(15) + numpy.power(10*numpy.ones([1, 6]), numpy.arange(-6, 0, 1)), 0.0602326*numpy.ones(6)])
+params = numpy.vstack([2/3.*numpy.sqrt(1/3.) + numpy.power(10*numpy.ones([1, 6]), numpy.arange(-6, 0, 1)), 0.06415003*numpy.ones(6)])
 
 dt = 0.1
 T = 10000
 t = numpy.arange(0, T, dt)
 g = 1
 
-alpha = 8/11
-beta = 13/11
+alpha = 4/5.
+beta = 7/5.
 
 V = numpy.zeros([params.shape[1], len(t)], dtype='complex128')  # need to use complex due to precision issues
 
@@ -21,7 +21,7 @@ for i in range(1, len(t)):
 for i, curve in enumerate(V):
     plt.semilogx(t, curve, label='${:.5f}$'.format(params[0, i]))
 
-plt.semilogx(t, numpy.ones(len(t))*0.0602326/numpy.e, color='black', linestyle='--')
+plt.semilogx(t, numpy.ones(len(t))*0.06415003/numpy.e, color='black', linestyle='--')
 
 import matplotlib
 matplotlib.rc('text', usetex=True)

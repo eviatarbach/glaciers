@@ -4,6 +4,7 @@ import bisect
 
 import pandas
 import numpy
+import scipy
 import scipy.io.netcdf as netcdf
 
 def closest_index_in_range(lower, upper, step, value):
@@ -79,6 +80,8 @@ data_ela = data_ela[data_ela['ELA_PREFIX'].isnull()]
 data_mb['ela'] = data_ela['ELA']
 data_mb = data_mb.dropna()
 
+ccoefs = []
+
 # Calculate average mass balance gradients
 for glacier in names:
     gradients = []
@@ -90,33 +93,37 @@ for glacier in names:
         altitudes = numpy.hstack([numpy.ones([array.shape[0], 1]), array[:, 1:]])
         balance = array[:, 0:1]
 
-        g = numpy.linalg.lstsq(altitudes, balance)[0][1]
-        gradients.append(g)
+        if len(balance) > 2:
 
-        # Gradient around ELA
-        ela = data_mb.loc[glacier, year]['ela'].iloc[0]
+            ccoef = scipy.corrcoef(altitudes[:, 1], balance.T)
+            ccoefs.append((len(balance), ccoef[0, 1]))
+            g = numpy.linalg.lstsq(altitudes, balance)[0][1]
+            gradients.append(g)
 
-        if array[0, 1] < ela < array[-1, 1]:
-            ela_i = bisect.bisect(array[:, 1:], ela)
+            # Gradient around ELA
+            ela = data_mb.loc[glacier, year]['ela'].iloc[0]
 
-            y2 = array[ela_i - 1:ela_i + 1, 1][1]
-            y1 = array[ela_i - 1:ela_i + 1, 1][0]
+            if array[0, 1] < ela < array[-1, 1]:
+                ela_i = bisect.bisect(array[:, 1:], ela)
 
-            mb2 = array[ela_i - 1:ela_i + 1, 0][1]
-            mb1 = array[ela_i - 1:ela_i + 1, 0][0]
+                y2 = array[ela_i - 1:ela_i + 1, 1][1]
+                y1 = array[ela_i - 1:ela_i + 1, 1][0]
 
-            g2 = (mb2 - mb1)/(y2 - y1)
-            gradients2.append(g2)
+                mb2 = array[ela_i - 1:ela_i + 1, 0][1]
+                mb1 = array[ela_i - 1:ela_i + 1, 0][0]
 
-        # Average gradient from lowest and highest altitude
-        y2 = array[-1, 1]
-        y1 = array[0, 1]
+                g2 = (mb2 - mb1)/(y2 - y1)
+                gradients2.append(g2)
 
-        mb2 = array[-1, 0]
-        mb1 = array[0, 0]
+            # Average gradient from lowest and highest altitude
+            y2 = array[-1, 1]
+            y1 = array[0, 1]
 
-        g3 = (mb2 - mb1)/(y2 - y1)
-        gradients3.append(g3)
+            mb2 = array[-1, 0]
+            mb1 = array[0, 0]
+
+            g3 = (mb2 - mb1)/(y2 - y1)
+            gradients3.append(g3)
 
     glaciers.loc[glacier, 'g'] = numpy.mean(gradients)
     glaciers.loc[glacier, 'g2'] = numpy.mean(gradients2)
