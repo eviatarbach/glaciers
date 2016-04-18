@@ -28,12 +28,12 @@ Xnorm = (X - X.mean())/(X.std())
 X2 = all_glaciers.dropna()[features2]
 Xnorm2 = (X2 - X2.mean())/(X2.std())
 
-m = sm.GLM(glaciers['g'], sm.add_constant(Xnorm), family=sm.families.InverseGaussian(sm.families.links.log))
+m = sm.GLM(glaciers['g'], sm.add_constant(Xnorm[['max_elevation', 'median_elevation', 'continentality', 'summer_temperature', 'precipitation']].values), family=sm.families.InverseGaussian(sm.families.links.log))
 
 clf = sklearn.linear_model.RidgeCV()
 clf.fit(Xnorm, glaciers['g'])
 
-all_glaciers['g'] = m.fit().predict(sm.add_constant(Xnorm2))
+all_glaciers['g'] = m.fit().predict(sm.add_constant(Xnorm2[['Zmax', 'Zmed', 'continentality', 'summer_temperature', 'precipitation']].values))
 #all_glaciers['g'] = clf.predict(Xnorm2)
 #all_glaciers = all_glaciers[all_glaciers['g'] > 0]
 
@@ -65,27 +65,31 @@ for i, region_name in enumerate(RGI_REGIONS):
         ca = volumes/(areas**gamma)
         cw = (ca/cl)**(1/(q - gamma))
 
-        Ldim = ((2*cl**((a + 2)/q)*cw**a)/(slopes*numpy.cos(slopes)))**(q/(3*(a - q + 2)))
+        Ldim = ((2*cl**((a + 2)/q)*cw**a)/(slopes))**(q/(3*(a - q + 2)))
 
         volumes_nd = volumes/Ldim**3
 
         zela_nd = zela/Ldim
         cl_nd = cl*Ldim**(q - 3)
 
-        P = (2*zela_nd*cl_nd**(1/q))/(slopes*numpy.cos(slopes))
+        P = (2*zela_nd*cl_nd**(1/q))/(slopes)
 
         all_glaciers.loc[(region_name,), 'P'] = P.values
         all_glaciers.loc[(region_name,), 'zela'] = zela.values
 
-        sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes*numpy.cos(slopes))*diff(P)
+        sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes)*diff(P)
         
         all_glaciers.loc[(region_name,), 'sensitivity'] = numpy.float64(sensitivity.values)
 
         volumes_ss = f_vec(P)
 
-        tau = -(g*numpy.cos(slopes)*(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1)))**(-1)
+        tau = -(g*(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1)))**(-1)
 
         all_glaciers.loc[(region_name,), 'tau'] = tau.values
+
+
+        tau2 = -(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1))**(-1)
+        all_glaciers.loc[(region_name,), 'tau2'] = tau2.values
 
         #region_volume = sum(volumes.values[((P != float('inf')) & (P < 0.1859) & (sensitivity > -5000)).nonzero()])
         region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])

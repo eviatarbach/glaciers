@@ -55,5 +55,5 @@ diff = numpy.vectorize(lambda p: mpmath.diff(lambda p2: f_vec(p2), p, h=1e-6))
 P0 = 0.384900179459750
 V0 = 0.06415
 
-def latex_bars(names, values):
-    return '\n'.join(map(lambda n, l: n + ' & \mybar{' + '{:.2f}'.format(l) + '}\\\\', names, values))
+def latex_bars(names, values, scale):
+    return '\n'.join(map(lambda n, l: n + ' & ' + '{:.3f}'.format(l) + ' & \mybar{' + str(scale) + '}{' + '{:.3f}'.format(l) + '}\\\\', names, values))

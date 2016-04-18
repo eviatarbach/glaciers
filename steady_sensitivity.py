@@ -50,15 +50,17 @@ for i, region_name in enumerate(RGI_REGIONS):
         ca = volumes/(areas**gamma)
         cw = (ca/cl)**(1/(q - gamma))
 
-        Ldim = ((2*cl**((a + 2)/q)*cw**a)/(slopes*numpy.cos(slopes)))**(q/(3*(a - q + 2)))
+        Ldim = ((2*cl**((a + 2)/q)*cw**a)/(slopes))**(q/(3*(a - q + 2)))
 
         volumes_nd = volumes/Ldim**3
 
         P = Pval_vec(volumes_nd)
 
-        sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes*numpy.cos(slopes))*diff(P)
+        index = P > -253
 
-        region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])
+        sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes)*diff(P)
 
-        sensitivities.append(sensitivity)
+        region_volume = sum(volumes.values[((P != float('inf')) & (P < P0) & (P > -253)).nonzero()])
+
+        sensitivities.append(sensitivity[index])
         region_volumes.append(region_volume)
