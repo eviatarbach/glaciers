@@ -17,7 +17,7 @@ def powerset(iterable):
     s = list(iterable)
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s)+1))
 
-features = ['max_elevation', 'median_elevation', 'continentality', 'summer_temperature', 'precipitation', 'winter_precipitation', 'cloud_cover']
+features = ['max_elevation', 'median_elevation', 'continentality', 'summer_temperature', 'precipitation', 'winter_precipitation', 'cloud_cover', 'lapse_rate']
 
 glaciers = glaciers.reindex(numpy.random.permutation(glaciers.index))
 X = glaciers[features]
@@ -30,7 +30,7 @@ def aic(Xtest, ytest, Xtrain, ytrain):
     results = []
     for subset in powerset(features):
         X2 = Xtrain[list(('const',) + subset)]
-        model = sm.OLS(ytrain, X2)
+        model = sm.GLM(ytrain, X2, family=sm.families.InverseGaussian(sm.families.links.log))
         results.append((model.fit().aic, subset, model))
     aic_score, subset_aic, model_aic = results[numpy.argmin([r[0] for r in results])]
     error = ((ytest - model_aic.fit().predict(Xtest[['const'] + list(subset_aic)]))**2).mean()
@@ -42,7 +42,7 @@ def bic(Xtest, ytest, Xtrain, ytrain):
     results = []
     for subset in powerset(features):
         X2 = Xtrain[list(('const',) + subset)]
-        model = sm.OLS(ytrain, X2)
+        model = sm.GLM(ytrain, X2, family=sm.families.InverseGaussian(sm.families.links.log))
         results.append((model.fit().bic, subset, model))
     bic_score, subset_bic, model_bic = results[numpy.argmin([r[0] for r in results])]
     error = ((ytest - model_bic.fit().predict(Xtest[['const'] + list(subset_bic)]))**2).mean()
@@ -60,48 +60,19 @@ def cv(Xtest, ytest, Xtrain, ytrain):
     error = ((ytest - model_cv.predict(Xtest[list(subset_cv)]))**2).mean()
     return (subset_cv, error)
 
-def l1(Xtest, ytest, Xtrain, ytrain):
-    results = []
-    clf = sklearn.linear_model.LassoCV()
-    model = clf.fit(Xtrain, ytrain)
-    error = ((ytest - model.predict(Xtest))**2).mean()
-    return (tuple(map(lambda i: features[i], model.coef_.nonzero()[0])), error)
-
-def l2(Xtest, ytest, Xtrain, ytrain):
-    results = []
-    clf = sklearn.linear_model.RidgeCV()
-    model = clf.fit(Xtrain, ytrain)
-    error = ((ytest - model.predict(Xtest))**2).mean()
-    return (tuple(map(lambda i: features[i], model.coef_.nonzero()[0])), error)
-
-def bayesian_ridge(Xtest, ytest, Xtrain, ytrain):
-    results = []
-    clf = sklearn.linear_model.BayesianRidge()
-    model = clf.fit(Xtrain, ytrain)
-    error = ((ytest - model.predict(Xtest))**2).mean()
-    return (tuple(map(lambda i: features[i], model.coef_.nonzero()[0])), error)
-
-def ard(Xtest, ytest, Xtrain, ytrain):
-    results = []
-    clf = sklearn.linear_model.ARDRegression()
-    model = clf.fit(Xtrain, ytrain)
-    error = ((ytest - model.predict(Xtest))**2).mean()
-    return (tuple(map(lambda i: features[i], model.coef_.nonzero()[0])), error)
-
 aic_list = []
 bic_list = []
 cv_list = []
-l1_list = []
-l2_list = []
-bayesian_list = []
-ard_list = []
 
-for i in range(10):
-    glaciers = glaciers.reindex(numpy.random.permutation(glaciers.index))
-    X = glaciers[features]
-    y = glaciers['g']
-    Xnorm = (X - X.mean())/(X.std())
+glaciers = glaciers.reindex(numpy.random.permutation(glaciers.index))
+X = glaciers[features]
+y = glaciers['g']
+Xnorm = sm.add_constant((X - X.mean())/(X.std()))
 
+i = 0
+for subset in powerset(features):
+    print(i)
+    subset_err = []
     for train, test in sklearn.cross_validation.KFold(len(glaciers), n_folds=8):
         Xtrain = Xnorm.iloc[train, :]
         ytrain = y.iloc[train]
@@ -109,10 +80,10 @@ for i in range(10):
         Xtest = Xnorm.iloc[test, :]
         ytest = y.iloc[test]
 
-        aic_list.append(aic(Xtest, ytest, Xtrain, ytrain))
-        bic_list.append(bic(Xtest, ytest, Xtrain, ytrain))
-        cv_list.append(cv(Xtest, ytest, Xtrain, ytrain))
-        l2_list.append(l2(Xtest, ytest, Xtrain, ytrain))
-        l1_list.append(l1(Xtest, ytest, Xtrain, ytrain))
-        bayesian_list.append(bayesian_ridge(Xtest, ytest, Xtrain, ytrain))
-        ard_list.append(ard(Xtest, ytest, Xtrain, ytrain))
+        X2 = Xtrain[['const'] + list(subset)]
+        model = sm.GLM(ytrain, X2, family=sm.families.InverseGaussian(sm.families.links.log)).fit()
+        error = ((ytest - model.predict(Xtest[['const'] + list(subset)]))**2).mean()
+
+        subset_err.append(error)
+    cv_list.append((subset, numpy.mean(subset_err)))
+    i += 1
