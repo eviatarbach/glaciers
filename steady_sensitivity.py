@@ -54,13 +54,17 @@ for i, region_name in enumerate(RGI_REGIONS):
 
         volumes_nd = volumes/Ldim**3
 
-        P = Pval_vec(volumes_nd)
+        # Steady-state
+        zela = heights - lengths*slopes/2
 
-        index = P > -253
+        zela_nd = zela/Ldim
+        cl_nd = cl*Ldim**(q - 3)
+
+        P = (2*zela_nd*cl_nd**(1/q))/(slopes)
 
         sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes)*diff(P)
 
-        region_volume = sum(volumes.values[((P != float('inf')) & (P < P0) & (P > -253)).nonzero()])
+        region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])
 
-        sensitivities.append(sensitivity[index])
+        sensitivities.append(sensitivity)
         region_volumes.append(region_volume)

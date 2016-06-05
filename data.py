@@ -20,6 +20,14 @@ RGI_NAMES = ['Alaska', 'Antarctic and Subantarctic', 'Arctic Canada (North)',
              'South Asia (West)', 'Southern Andes', 'Svalbard and Jan Mayen',
              'Western Canada and USA']
 
+RGI_NAMES2 = ['Arctic Canada (North)',
+             'Arctic Canada (South)', 'Caucasus and Middle East',
+             'Central Asia', 'Central Europe', 'Greenland (periphery)',
+             'Iceland', 'New Zealand', 'North Asia',
+             'Russian Arctic', 'Scandinavia', 'South Asia (East)',
+             'South Asia (West)', 'Southern Andes', 'Svalbard and Jan Mayen',
+             'Western Canada and USA']
+
 a = 1/3.
 q = 5/3.
 gamma = 1.25
@@ -50,7 +58,7 @@ def f(P):
 
 f_vec = numpy.vectorize(f)
 
-diff = numpy.vectorize(lambda p: mpmath.diff(lambda p2: f_vec(p2), p, h=1e-6))
+diff = numpy.vectorize(lambda p: float(mpmath.diff(lambda p2: f_vec(float(p2)), p, h=1e-6)))
 
 P0 = 0.384900179459750
 V0 = 0.06415

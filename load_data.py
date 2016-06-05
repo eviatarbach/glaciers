@@ -198,9 +198,9 @@ for glacier in names:
 temp = netCDF4.Dataset('air.mon.mean.nc', 'a')  # monthly means of air temperatures
 height = netCDF4.Dataset('hgt.mon.mean.nc', 'a')  # geopotential heights
 
-# the -4 is to slice the years correctly
-temp_var = temp.variables['air'][-244:-4, :, :, :]
-height_var = height.variables['hgt'][-244:-4, :, :, :]
+# slice 1995--2014 the years correctly
+temp_var = temp.variables['air'][-255:-15, :, :, :]
+height_var = height.variables['hgt'][-255:-15, :, :, :]
 
 # Lapse rates
 for glacier in names:

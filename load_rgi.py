@@ -8,6 +8,12 @@ import geopy
 
 # TODO: what to do with Alaska?
 
+def median_elev(hypso, elevs):
+    cumsum = numpy.cumsum(hypso, axis=1)
+    i_upper = numpy.apply_along_axis(lambda a: a.searchsorted(500), axis=1, arr=cumsum)
+    i_lower = i_upper - 1
+    return elevs[i_lower] + 50*(500 - cumsum.values[numpy.arange(len(cumsum)), i_lower])/(cumsum.values[numpy.arange(len(cumsum)), i_upper] - cumsum.values[numpy.arange(len(cumsum)), i_lower])
+
 regions_thickness = ['alaska', 'westerncanada', 'arcticcanadaN',
                      'arcticcanadaS', 'greenland', 'iceland',
                      'svalbard', 'scandinavia', 'russianarctic',
@@ -56,14 +62,20 @@ for i, region in enumerate(regions_rgi):
 
     hypso_data['RGIId   '] = hypso_data['RGIId   '].str[-5:]
     hypso_data = hypso_data.set_index('RGIId   ')
-    
-    altitudes = numpy.array(list(map(numpy.float, hypso_data.columns[2:])))
-
-    # hypsometric maximum
-    region_data['ELA'] = altitudes[numpy.argmax(hypso_data.values[:, 2:], axis=1)]
 
     # remove glaciers with no hypsometry data (-9 in RGI)
     region_data = region_data[~(hypso_data.values[:, 2:] < 0).any(axis=1)]
+    hypso_data = hypso_data[~(hypso_data.values[:, 2:] < 0).any(axis=1)]
+
+    altitudes = numpy.array(list(map(numpy.float, hypso_data.columns[2:])))
+
+    # mean altitude
+    region_data['ELA'] = (altitudes*hypso_data[hypso_data.columns[2:]]/1000).sum(axis=1)
+
+    # median altitude
+    region_data['ELA2'] = median_elev(hypso_data[hypso_data.columns[2:]], altitudes)
+
+    #region_data['ELA'] = altitudes[numpy.argmax(hypso_data.values[:, 2:], axis=1)]
 
     # remove glaciers with unknown slope (-9 in RGI)
     region_data = region_data[region_data['Slope'] > 0]
