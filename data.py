@@ -4,6 +4,31 @@ import numpy
 
 from roots import RationalPowers
 
+
+def closest_index_in_range(lower, upper, step, value):
+    '''
+    Find the index of the closest value to `value` in the range
+    [lower, lower + step, ..., upper - step, upper] in constant time. `upper`
+    must be greater than `lower`. If `value` is outside the range, return the
+    corresponding boundary index (0 or the last index). When two values are
+    equally close, the index of the smaller is returned.
+    '''
+    if value >= upper:
+        return int((upper - lower)/step)
+    elif value < lower:
+        return 0
+
+    value = value - lower
+    upper = upper - lower
+    lower = 0
+
+    index = int(value//step + 1)
+
+    if step*index - value >= value - step*(index - 1):
+        index -= 1
+
+    return index
+
 RGI_REGIONS = ['Alaska', 'WesternCanadaUS', 'ArcticCanadaNorth',
                'ArcticCanadaSouth', 'GreenlandPeriphery', 'Iceland',
                'Svalbard', 'Scandinavia', 'RussianArctic', 'NorthAsia',
