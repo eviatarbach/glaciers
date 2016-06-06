@@ -8,10 +8,11 @@ from roots import RationalPowers
 def closest_index_in_range(lower, upper, step, value):
     '''
     Find the index of the closest value to `value` in the range
-    [lower, lower + step, ..., upper - step, upper] in constant time. `upper`
-    must be greater than `lower`. If `value` is outside the range, return the
-    corresponding boundary index (0 or the last index). When two values are
-    equally close, the index of the smaller is returned.
+    [lower, lower + step, ..., upper - step, upper] in constant time.
+    `upper` must be greater than `lower`. If `value` is outside the
+    range, return the corresponding boundary index (0 or the last
+    index). When two values are equally close, the index of the smaller
+    is returned.
     '''
     if value >= upper:
         return int((upper - lower)/step)
@@ -29,30 +30,29 @@ def closest_index_in_range(lower, upper, step, value):
 
     return index
 
-RGI_REGIONS = ['Alaska', 'WesternCanadaUS', 'ArcticCanadaNorth',
-               'ArcticCanadaSouth', 'GreenlandPeriphery', 'Iceland',
-               'Svalbard', 'Scandinavia', 'RussianArctic', 'NorthAsia',
-               'CentralEurope', 'CaucasusMiddleEast', 'CentralAsia',
-               'SouthAsiaWest', 'SouthAsiaEast', 'LowLatitudes',
-               'SouthernAndes', 'NewZealand', 'AntarcticSubantarctic']
+RGI_REGIONS = ['Alaska', 'WesternCanadaUS', 'ArcticCanadaNorth', 'ArcticCanadaSouth',
+               'GreenlandPeriphery', 'Iceland', 'Svalbard', 'Scandinavia', 'RussianArctic',
+               'NorthAsia', 'CentralEurope', 'CaucasusMiddleEast', 'CentralAsia', 'SouthAsiaWest',
+               'SouthAsiaEast', 'LowLatitudes', 'SouthernAndes', 'NewZealand',
+               'AntarcticSubantarctic']
 
-RGI_NAMES = ['Alaska', 'Western Canada and USA', 'Arctic Canada (North)',
-             'Arctic Canada (South)', 'Greenland (periphery)', 'Iceland',
-             'Svalbard and Jan Mayen', 'Scandinavia', 'Russian Arctic',
-             'North Asia', 'Central Europe', 'Caucasus and Middle East',
-             'Central Asia', 'South Asia (West)', 'South Asia (East)',
-             'Low Latitudes', 'Southern Andes', 'New Zealand',
-             'Antarctic and Subantarctic']
+RGI_NAMES = ['Alaska', 'Western Canada and USA', 'Arctic Canada (North)', 'Arctic Canada (South)',
+             'Greenland (periphery)', 'Iceland', 'Svalbard and Jan Mayen', 'Scandinavia',
+             'Russian Arctic', 'North Asia', 'Central Europe', 'Caucasus and Middle East',
+             'Central Asia', 'South Asia (West)', 'South Asia (East)', 'Low Latitudes',
+             'Southern Andes', 'New Zealand', 'Antarctic and Subantarctic']
+
+THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'greenland',
+                 'iceland', 'svalbard', 'scandinavia', 'russianarctic', 'northasia',
+                 'centraleurope', 'caucasus', 'centralasiaN', 'centralasiaW', 'centralasiaS',
+                 'lowlatitudes', 'southernandes', 'newzealand', 'antarctic']
 
 p = fractions.Fraction(5, 3)
 gamma = fractions.Fraction(5, 4)
 
 # Equation is -Q*V^(7/5) + P*V^(2/5) - 2*P*V^(1/5) + P + V - V^(4/5)
-equation = RationalPowers(numpy.array([fractions.Fraction(7, 5),
-                                       fractions.Fraction(2, 5),
-                                       fractions.Fraction(1, 5),
-                                       0, 1,
-                                       fractions.Fraction(4, 5)]))
+equation = RationalPowers(numpy.array([fractions.Fraction(7, 5), fractions.Fraction(2, 5),
+                                       fractions.Fraction(1, 5), 0, 1, fractions.Fraction(4, 5)]))
 
 
 def eq_volume(P, Q):

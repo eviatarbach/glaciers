@@ -3,15 +3,17 @@ from functools import reduce
 
 import numpy
 
+
 def lcm(a, b):
     # Return the least common denominator of two non-negative numbers
     return a*b//gcd(a, b)
 
+
 class RationalPowers:
     def __init__(self, exponents):
         '''
-        Put all the exponent logic in here so once we have the coefficients
-        we can more quickly find the roots.
+        Put all the exponent logic in here so once we have the
+        coefficients we can more quickly find the roots.
         '''
         denom_lcm = reduce(lcm, [exponent.denominator for exponent in exponents])
         num_gcd = reduce(gcd, [exponent.numerator for exponent in exponents])

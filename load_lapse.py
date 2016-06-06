@@ -5,6 +5,9 @@ import scipy
 import scipy.stats
 import netCDF4
 
+from data import closest_index_in_range
+
+
 def straddle(arr, value):
     diffs = arr - value
     diffs[diffs < 0] = float('inf')
@@ -14,31 +17,6 @@ def straddle(arr, value):
     index[value < arr[:, 0]] = 1
     index[value > arr[:, -1]] = arr.shape[1] - 1
     return numpy.vstack([index - 1, index]).T
-
-def closest_index_in_range(lower, upper, step, value):
-    '''
-    Find the index of the closest value to `value` in the range
-    [lower, lower + step, ..., upper - step, upper] in constant time. `upper`
-    must be greater than `lower`. If `value` is outside the range, return the
-    corresponding boundary index (0 or the last index). When two values are
-    equally close, the index of the smaller is returned.
-    '''
-    if value >= upper:
-        return int((upper - lower)/step)
-    elif value < lower:
-        return 0
-
-    value = value - lower
-    upper = upper - lower
-    lower = 0
-
-    index = int(value//step + 1)
-
-    if step*index - value >= value - step*(index - 1):
-        index -= 1
-
-    return index
-
 
 temp = netCDF4.Dataset('air.mon.mean.nc', 'a')  # monthly means of air temperatures
 height = netCDF4.Dataset('hgt.mon.mean.nc', 'a')  # geopotential heights
