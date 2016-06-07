@@ -1,11 +1,10 @@
 import datetime
-import bisect
 
 import pandas
 import numpy
 import scipy
 import scipy.io.netcdf as netcdf
-import scipy.stats
+from scipy.stats import linregress
 import netCDF4
 
 from data import closest_index_in_range
@@ -21,6 +20,8 @@ data_mb = data_mb.drop(['LOWER_BOUND', 'UPPER_BOUND'], axis=1)
 
 # Only use mass balance data by altitude band
 data_mb = data_mb[data_mb['ALTITUDE'] != 9999]
+# Removing invalid value
+data_mb = data_mb[data_mb['ANNUAL_BALANCE'] != -9999]
 data_mb = data_mb.dropna()
 
 names = data_mb.index.get_level_values('WGMS_ID').unique()
@@ -66,49 +67,35 @@ ccoefs = []
 # Calculate average mass balance gradients
 for glacier in names:
     gradients = []
-    gradients2 = []
-    gradients3 = []
-    for year in data_mb.loc[glacier].index.unique():
+    gradients_abl = []
+    gradients_acc = []
+    years = data_mb.loc[glacier].index.unique()
+    years = years[(1995 <= years) & (years <= 2014)]
+    for year in years:
         # Gradient using slope of linear regression
         array = data_mb.loc[glacier, year][['ANNUAL_BALANCE', 'ALTITUDE']].values
         altitudes = numpy.hstack([numpy.ones([array.shape[0], 1]),
                                   array[:, 1:]])
         balance = array[:, 0:1]
 
-        if len(balance) > 2:
-            ccoef = scipy.corrcoef(altitudes[:, 1], balance.T)
-            ccoefs.append((len(balance), ccoef[0, 1]))
-            g = numpy.linalg.lstsq(altitudes, balance)[0][1]
-            gradients.append(g)
+        ccoef = scipy.corrcoef(altitudes[:, 1], balance.T)
+        ccoefs.append((len(balance), ccoef[0, 1]))
+        g = numpy.linalg.lstsq(altitudes, balance)[0][1]
+        gradients.append(g)
 
-            # Gradient around ELA
-            ela = data_mb.loc[glacier, year]['ela'].iloc[0]
+        ela = data_mb.loc[glacier, year]['ela'].iloc[0]
+        ela_i = altitudes[:, 1].searchsorted(ela)
 
-            if array[0, 1] < ela < array[-1, 1]:
-                ela_i = bisect.bisect(array[:, 1:], ela)
+        if (ela_i >= 2) and (len(balance) - ela_i >= 2):
+            g_abl = numpy.linalg.lstsq(altitudes[:ela_i], balance[:ela_i])[0][1]
+            g_acc = numpy.linalg.lstsq(altitudes[ela_i:], balance[ela_i:])[0][1]
 
-                y2 = array[ela_i - 1:ela_i + 1, 1][1]
-                y1 = array[ela_i - 1:ela_i + 1, 1][0]
-
-                mb2 = array[ela_i - 1:ela_i + 1, 0][1]
-                mb1 = array[ela_i - 1:ela_i + 1, 0][0]
-
-                g2 = (mb2 - mb1)/(y2 - y1)
-                gradients2.append(g2)
-
-            # Average gradient from lowest and highest altitude
-            y2 = array[-1, 1]
-            y1 = array[0, 1]
-
-            mb2 = array[-1, 0]
-            mb1 = array[0, 0]
-
-            g3 = (mb2 - mb1)/(y2 - y1)
-            gradients3.append(g3)
+            gradients_abl.append(g_abl)
+            gradients_acc.append(g_acc)
 
     glaciers.loc[glacier, 'g'] = numpy.mean(gradients)
-    glaciers.loc[glacier, 'g2'] = numpy.mean(gradients2)
-    glaciers.loc[glacier, 'g3'] = numpy.mean(gradients3)
+    glaciers.loc[glacier, 'g_abl'] = numpy.mean(gradients_abl)
+    glaciers.loc[glacier, 'g_acc'] = numpy.mean(gradients_acc)
 
 temp_data = netcdf.netcdf_file('data/cru_ts3.23.1901.2014.tmp.dat.nc', 'r')
 pre_data = netcdf.netcdf_file('data/cru_ts3.23.1901.2014.pre.dat.nc', 'r')
@@ -182,8 +169,8 @@ for glacier in names:
         mean_cld = grid_square_cld[-20:, :].mean()
         glaciers.loc[glacier, 'cloud_cover'] = mean_cld
 
-temp = netCDF4.Dataset('air.mon.mean.nc', 'a')  # monthly means of air temps
-height = netCDF4.Dataset('hgt.mon.mean.nc', 'a')  # geopotential heights
+temp = netCDF4.Dataset('data/air.mon.mean.nc', 'a')  # monthly means of air temps
+height = netCDF4.Dataset('data/hgt.mon.mean.nc', 'a')  # geopotential heights
 
 # slice 1995--2014 the years correctly
 temp_var = temp.variables['air'][-255:-15, :, :, :]
@@ -208,11 +195,11 @@ for glacier in names:
         heights = grid_square_heights[i, :]
         temps = grid_square_temps[i, :]
 
-        index = heights < 10000
-        lapse_rates.append(-scipy.stats.linregress(heights[index], temps[index])[0])
+        index = heights < 10000  # restrict to troposphere
+        lapse_rates.append(-linregress(heights[index], temps[index])[0])
 
     lapse_mean = numpy.array(lapse_rates).reshape(20, 12).mean(axis=1).mean()
 
     glaciers.loc[glacier, 'lapse_rate'] = lapse_mean
 
-glaciers.to_pickle('glaciers')
+glaciers.to_pickle('data/serialized/glaciers')
