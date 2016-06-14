@@ -6,14 +6,14 @@ from roots import RationalPowers
 
 
 def closest_index_in_range(lower, upper, step, value):
-    '''
+    """
     Find the index of the closest value to `value` in the range
     [lower, lower + step, ..., upper - step, upper] in constant time.
-    `upper` must be greater than `lower`. If `value` is outside the
+    `upper` must be greater than `lower`.  If `value` is outside the
     range, return the corresponding boundary index (0 or the last
-    index). When two values are equally close, the index of the smaller
+    index).  When two values are equally close, the index of the smaller
     is returned.
-    '''
+    """
     if value >= upper:
         return int((upper - lower)/step)
     elif value < lower:

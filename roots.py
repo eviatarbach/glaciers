@@ -11,10 +11,10 @@ def lcm(a, b):
 
 class RationalPowers:
     def __init__(self, exponents):
-        '''
+        """
         Put all the exponent logic in here so once we have the
         coefficients we can more quickly find the roots.
-        '''
+        """
         denom_lcm = reduce(lcm, [exponent.denominator for exponent in exponents])
         num_gcd = reduce(gcd, [exponent.numerator for exponent in exponents])
         recip_gcd = denom_lcm/num_gcd
