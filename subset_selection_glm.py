@@ -25,7 +25,7 @@ cv_list = []
 
 glaciers = glaciers.reindex(numpy.random.permutation(glaciers.index))
 X = glaciers[features]
-y = glaciers['g_abl']
+y = glaciers['g_acc']
 Xnorm = sm.add_constant((X - X.mean())/(X.std()))
 
 i = 0

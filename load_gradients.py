@@ -58,22 +58,29 @@ with open('data/serialized/glaciers_climate', 'br') as glaciers_file,\
     glm_acc = sm.GLM(glaciers[acc_feature_mask]['g_acc'], g_acc_features,
                      family=sm.families.Gamma()).fit()
 
-    for glacier in glaciers.index:
-        neighbour_abl_res = neighbours_abl.predict(glaciers.loc[[glacier], ['lat', 'lon']])
-        if glaciers.loc[glacier, ABL_FEATURES].isnull().any():
+    c = 0
+    for glacier in all_glaciers.index:
+        c += 1
+        print(c/len(all_glaciers))
+        neighbour_abl_res = neighbours_abl.predict(all_glaciers.loc[[glacier], ['lat', 'lon']])
+        if all_glaciers.loc[glacier, ABL_FEATURES].isnull().any():
             abl_res = neighbour_abl_res
         else:
-            glm_abl_res = glm_abl.predict(sm.add_constant((glaciers.loc[[glacier], ABL_FEATURES]
+            glm_abl_res = glm_abl.predict(sm.add_constant((all_glaciers.loc[[glacier],
+                                                                            ABL_FEATURES]
                                                            - abl_mean)/abl_std))
             abl_res = 0.5*neighbour_abl_res + 0.5*glm_abl_res
 
-        neighbour_acc_res = neighbours_acc.predict(glaciers.loc[[glacier], ['lat', 'lon']])
-        if glaciers.loc[glacier, ACC_FEATURES].isnull().any():
+        neighbour_acc_res = neighbours_acc.predict(all_glaciers.loc[[glacier], ['lat', 'lon']])
+        if all_glaciers.loc[glacier, ACC_FEATURES].isnull().any():
             acc_res = neighbour_acc_res
         else:
-            glm_acc_res = glm_acc.predict(sm.add_constant((glaciers.loc[[glacier], ACC_FEATURES]
+            glm_acc_res = glm_acc.predict(sm.add_constant((all_glaciers.loc[[glacier],
+                                                                            ACC_FEATURES]
                                                            - acc_mean)/acc_std))
             acc_res = 0.6*neighbour_acc_res + 0.4*glm_acc_res
 
-        print(glaciers.loc[glacier, 'g_abl'], abl_res)
-        print(glaciers.loc[glacier, 'g_acc'], acc_res)
+        all_glaciers.loc[glacier, 'g_abl'] = abl_res
+        all_glaciers.loc[glacier, 'g_acc'] = acc_res
+
+all_glaciers.to_pickle('data/serialized/all_glaciers')

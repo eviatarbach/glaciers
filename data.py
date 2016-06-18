@@ -50,10 +50,26 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
 p = fractions.Fraction(5, 3)
 gamma = fractions.Fraction(5, 4)
 
-# Equation is -Q*V^(7/5) + P*V^(2/5) - 2*P*V^(1/5) + P + V - V^(4/5)
-equation = RationalPowers(numpy.array([fractions.Fraction(7, 5), fractions.Fraction(2, 5),
-                                       fractions.Fraction(1, 5), 0, 1, fractions.Fraction(4, 5)]))
+# Equation is -Q*V^(4/5) - V^(7/5) + P*V^(1/5) + V - 2*P*V^(2/5)/Q + P*V^(3/5)/Q^2
+equation = RationalPowers(numpy.array([fractions.Fraction(4, 5), fractions.Fraction(7, 5),
+                                       fractions.Fraction(1, 5), 1, fractions.Fraction(2, 5),
+                                       fractions.Fraction(3, 5)]))
+
+# Derivative of the above, in order to evaluate stability
+# -4/5*Q/V^(1/5) - 7/5*V^(2/5) + 1/5*P/V^(4/5) - 4/5*P/(Q*V^(3/5)) + 3/5*P/(Q^2*V^(2/5)) + 1
+equation_diff = RationalPowers(numpy.array([fractions.Fraction(-1, 5), fractions.Fraction(2, 5),
+                                            fractions.Fraction(-4, 5), fractions.Fraction(-3, 5),
+                                            fractions.Fraction(-2, 5), 0]))
 
 
 def eq_volume(P, Q):
-    return equation.find_root(numpy.array([-Q, P, -2*P, P, 1, -1]))
+    return equation.find_root(numpy.array([-Q, -1, P, 1, -2*P/Q, P/Q**2]))
+
+
+def stability(P, Q, V):
+    terms = numpy.array([-4/5*Q, -7/5, 1/5*P, -4/5*P/Q, 3/5*P/Q**2, 1])
+    if V == 0:
+        # As V -> 0, the term with the most negative exponent dominates
+        return numpy.sign(terms[2])
+    else:
+        return numpy.sign(equation_diff.evaluate(terms, V))

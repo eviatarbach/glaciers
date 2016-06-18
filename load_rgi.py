@@ -54,6 +54,8 @@ for i, region in enumerate(RGI_REGIONS):
     region_data['Region'] = region
     region_data.set_index(['RGIId'])
 
+    region_data = region_data.rename(columns={'CenLat': 'lat', 'CenLon': 'lon'})
+
     thick_file = open('data/thick/thick_{name}_0.00_999.00.dat'.format(name=THICK_REGIONS[i]),
                       'r').read()
 
