@@ -1,13 +1,21 @@
 from fractions import gcd
 from functools import reduce
 
-import numpy
-
+import autograd.numpy as numpy
 
 def lcm(a, b):
     # Return the least common denominator of two non-negative numbers
     return a*b//gcd(a, b)
 
+def roots_func(coeffs):
+    coeffs = coeffs[::-1]
+    coeffs = coeffs/coeffs[-1]
+    n = len(coeffs) - 1
+    rows = []
+    rows.append([0]*(n - 1) + [-coeffs[0]])
+    for i in range(1, n):
+        rows.append([0]*(i - 1) + [1] + [0]*(n - i - 1) + [-coeffs[i]])
+    return numpy.linalg.eigvals(numpy.array(rows))
 
 class RationalPowers:
     def __init__(self, exponents):
@@ -29,10 +37,14 @@ class RationalPowers:
         return sum(coeffs*x**self.exponents)
 
     def find_root(self, coeffs):
-        poly = numpy.zeros(self.max_exponent + 1)
-        poly[self.new_exponents] = coeffs
+        # poly = numpy.zeros(self.max_exponent + 1)
+        # poly[self.new_exponents] = coeffs
 
-        roots = numpy.roots(poly[::-1])
-        roots = roots[(roots.imag == 0) & (roots.real >= 0)].real**self.recip_gcd
+        # Hack to work with autograd
+        poly = [coeffs[numpy.where(self.new_exponents == j)[0]][0] if j in self.new_exponents else 0 for j in range(self.max_exponent + 1)]
 
-        return numpy.unique(roots)
+        roots = roots_func(numpy.array(poly[::-1]))
+        roots = numpy.real(roots[(numpy.imag(roots) == 0) & (numpy.real(roots) >= 0)])**self.recip_gcd
+
+        #return numpy.unique(roots)
+        return roots

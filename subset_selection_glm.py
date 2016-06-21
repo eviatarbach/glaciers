@@ -15,6 +15,7 @@ glaciers = glaciers[glaciers['g_abl'] > 0]
 
 
 def power_set(iterable):
+    # From StackOverflow
     s = list(iterable)
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
 

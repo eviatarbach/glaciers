@@ -1,6 +1,6 @@
 import fractions
 
-import numpy
+import autograd.numpy as numpy
 
 from roots import RationalPowers
 
@@ -50,26 +50,26 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
 p = fractions.Fraction(5, 3)
 gamma = fractions.Fraction(5, 4)
 
-# Equation is -Q*V^(4/5) - V^(7/5) + P*V^(1/5) + V - 2*P*V^(2/5)/Q + P*V^(3/5)/Q^2
-equation = RationalPowers(numpy.array([fractions.Fraction(4, 5), fractions.Fraction(7, 5),
-                                       fractions.Fraction(1, 5), 1, fractions.Fraction(2, 5),
-                                       fractions.Fraction(3, 5)]))
+# Equation is 1/4*G*P^2*V^(1/5) - 1/2*G*P*V^(2/5) - P*V^(4/5) + 1/4*G*V^(3/5) - V^(7/5) + V
+equation = RationalPowers(numpy.array([fractions.Fraction(1, 5), fractions.Fraction(2, 5),
+                                       fractions.Fraction(4, 5), fractions.Fraction(3, 5),
+                                       fractions.Fraction(7, 5), 1]))
 
 # Derivative of the above, in order to evaluate stability
-# -4/5*Q/V^(1/5) - 7/5*V^(2/5) + 1/5*P/V^(4/5) - 4/5*P/(Q*V^(3/5)) + 3/5*P/(Q^2*V^(2/5)) + 1
-equation_diff = RationalPowers(numpy.array([fractions.Fraction(-1, 5), fractions.Fraction(2, 5),
-                                            fractions.Fraction(-4, 5), fractions.Fraction(-3, 5),
-                                            fractions.Fraction(-2, 5), 0]))
+# 1/20*G*P^2/V^(4/5) - 1/5*G*P/V^(3/5) - 4/5*P/V^(1/5) + 3/20*G/V^(2/5) - 7/5*V^(2/5) + 1
+equation_diff = RationalPowers(numpy.array([fractions.Fraction(-4, 5), fractions.Fraction(-3, 5),
+                                            fractions.Fraction(-1, 5), fractions.Fraction(-2, 5),
+                                            fractions.Fraction(2, 5), 0]))
 
 
-def eq_volume(P, Q):
-    return equation.find_root(numpy.array([-Q, -1, P, 1, -2*P/Q, P/Q**2]))
+def eq_volume(G, P):
+    return equation.find_root(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, -1, 1]))
 
 
-def stability(P, Q, V):
-    terms = numpy.array([-4/5*Q, -7/5, 1/5*P, -4/5*P/Q, 3/5*P/Q**2, 1])
+def stability(G, P, V):
+    terms = numpy.array([1/20*G*P**2, -1/5*G*P, -4/5*P, 3/20*G, -7/5, 1])
     if V == 0:
         # As V -> 0, the term with the most negative exponent dominates
-        return numpy.sign(terms[2])
+        return numpy.sign(terms[0])
     else:
         return numpy.sign(equation_diff.evaluate(terms, V))
