@@ -121,8 +121,32 @@ for i, region in enumerate(RGI_REGIONS):
 
     all_regions.append(region_data)
 
+# Remove glaciers with status = False, indicates that mapping may not be correct
+glathida_to_rgi = glathida_to_rgi[glathida_to_rgi['status']].dropna()
+
 all_glaciers = pandas.concat(all_regions).dropna()
 # all_glaciers = all_glaciers.drop('LowLatitudes')
+
+glathida = pandas.read_csv('data/GlaThiDa_2014/T.csv', usecols=['GlaThiDa_ID', 'MEAN_THICKNESS'],
+                           index_col=['GlaThiDa_ID'], encoding='ISO-8859-1', sep=';',
+                           skiprows=[0, 1, 3]).dropna()
+
+glathida.index = glathida.index.astype(numpy.int64)
+
+glathida_to_rgi = pandas.read_csv('data/Manual_links_GlaThiDa_to_RGI_WORLD_20160412.csv',
+                                  usecols=['GlaThiDa_ID', 'RGI_ID', 'status'],
+                                  index_col=['GlaThiDa_ID'], encoding='ISO-8859-1')
+
+conv = glathida_to_rgi.loc[glathida.index].dropna()
+conv['MEAN_THICKNESS'] = glathida['MEAN_THICKNESS']
+
+rgi_regions = all_glaciers.index.levels[0][conv['RGI_ID'].str[6:8].astype(int)]
+rgi_ids = conv['RGI_ID'].str[9:].values
+
+glathida_in_rgi = all_glaciers.loc[list(zip(rgi_regions, rgi_ids))].dropna().index
+valid_indices = numpy.array([i in all_glaciers.index for i in zip(rgi_regions, rgi_ids)])
+
+all_glaciers.loc[glathida_in_rgi, 'THICK_mean'] = conv['MEAN_THICKNESS'].values[valid_indices]
 
 pickle.dump(all_glaciers, open('data/serialized/all_glaciers', 'wb'))
 

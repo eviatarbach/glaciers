@@ -11,7 +11,7 @@ glaciers = pickle.load(open('data/serialized/glaciers_climate', 'br')).dropna()
 
 # Mass-balance gradient cannot be negative
 # glaciers = glaciers[glaciers['g_acc'] > 0]
-glaciers = glaciers[glaciers['g_abl'] > 0]
+glaciers = glaciers[glaciers['g'] > 0]
 
 
 def power_set(iterable):
@@ -26,7 +26,7 @@ cv_list = []
 
 glaciers = glaciers.reindex(numpy.random.permutation(glaciers.index))
 X = glaciers[features]
-y = glaciers['g_acc']
+y = glaciers['g']
 Xnorm = sm.add_constant((X - X.mean())/(X.std()))
 
 i = 0

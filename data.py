@@ -1,6 +1,6 @@
 import fractions
 
-import autograd.numpy as numpy
+import numpy
 
 from roots import RationalPowers
 
@@ -47,8 +47,8 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
                  'centraleurope', 'caucasus', 'centralasiaN', 'centralasiaW', 'centralasiaS',
                  'lowlatitudes', 'southernandes', 'newzealand', 'antarctic']
 
-p = fractions.Fraction(5, 3)
-gamma = fractions.Fraction(5, 4)
+p = 5/3
+gamma = 5/4
 
 # Equation is 1/4*G*P^2*V^(1/5) - 1/2*G*P*V^(2/5) - P*V^(4/5) + 1/4*G*V^(3/5) - V^(7/5) + V
 equation = RationalPowers(numpy.array([fractions.Fraction(1, 5), fractions.Fraction(2, 5),
@@ -66,10 +66,34 @@ def eq_volume(G, P):
     return equation.find_root(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, -1, 1]))
 
 
+def final_volume(G, P, V):
+    eq_volumes = eq_volume(G, P)
+    loc = eq_volumes.searchsorted(V)
+    if loc == len(eq_volumes):
+        # If the current volume is larger than the largest equilibrium
+        # volume, return the largest since the volume must be finite
+        # and non-negative
+        return eq_volumes[loc - 1]
+    lower, upper = (loc - 1, loc) if loc != 0 else (loc, loc + 1)
+    if stability(G, P, eq_volumes[lower]) == -1:
+        return eq_volumes[lower]
+    else:
+        return eq_volumes[upper]
+
+
 def stability(G, P, V):
     terms = numpy.array([1/20*G*P**2, -1/5*G*P, -4/5*P, 3/20*G, -7/5, 1])
     if V == 0:
         # As V -> 0, the term with the most negative exponent dominates
-        return numpy.sign(terms[0])
+        nonzero = numpy.nonzero(terms)
+        return numpy.sign(terms[nonzero][numpy.argmin(equation_diff.exponents[nonzero])])
     else:
         return numpy.sign(equation_diff.evaluate(terms, V))
+
+
+def diff(G, P, V, dP=1e-5):
+    return numpy.gradient([final_volume(G, P - dP, V), final_volume(G, P, V),
+                           final_volume(G, P + dP, V)], dP)[1]
+
+final_volume_vec = numpy.vectorize(final_volume)
+diff_vec = numpy.vectorize(diff)

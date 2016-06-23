@@ -1,19 +1,11 @@
 import pickle
 
 import numpy
-import scipy
-import scipy.interpolate
-import sklearn
-import sklearn.linear_model
-import mpmath
-import statsmodels.api as sm
 
-from data import RGI_REGIONS, p, gamma
+from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec
 
-with open('data/serialized/glaciers_climate', 'br') as glaciers_file,\
-     open('data/serialized/all_glaciers', 'br') as all_glaciers_file:
+with open('data/serialized/all_glaciers', 'br') as all_glaciers_file:
     all_glaciers = pickle.load(all_glaciers_file).dropna()
-    glaciers = pickle.load(glaciers_file).dropna()
 
     # remove all glaciers whose ELA is above or below the glacier, for some reason
     all_glaciers = all_glaciers[(all_glaciers['Zmin'] < all_glaciers['ELA'])
@@ -31,90 +23,66 @@ with open('data/serialized/glaciers_climate', 'br') as glaciers_file,\
         print(region_name)
         region = all_glaciers.loc[region_name]
 
-        if len(region):
-            volumes = region['volume']
-            heights = region['Thickness']
-            lengths = region['LENGTH']
-            slopes = region['SLOPE_avg']*numpy.pi/180
-            areas = region['area']
-            g_abl = region['g_abl']
-            g_acc = region['g_acc']
+        volumes = region['volume']
+        heights = region['Thickness']
+        lengths = region['LENGTH']
+        slopes = region['SLOPE_avg']*numpy.pi/180
+        areas = region['area']
+        g_abl = region['g_abl']/1000
+        g_acc = region['g_acc']/1000
 
-            #assert(sum(zela > heights) == 0)
+        G = g_acc/g_abl - 1
 
-            cl = volumes/(lengths**q)
-            ca = volumes/(areas**gamma)
+        cl = volumes/(lengths**p)
+        ca = volumes/(areas**gamma)
 
-            Ldim = ((2*cl**((a + 2)/q)*cw**a)/(slopes))**(q/(3*(a - q + 2)))
+        Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
 
-            volumes_nd = volumes/Ldim**3
-            cl_nd = cl*Ldim**(q - 3)
+        volumes_nd = volumes/Ldim**3
+        cl_nd = cl*Ldim**(p - 3)
+        ca_nd = ca*Ldim**(2*gamma - 3)
 
+        # Mid-range
+        ela_mid = (region['Zmax'] + region['Zmin'])/2
+
+        # Area-weighted
+        ela_weighted = region['ELA']
+
+        # Hypsometric median
+        ela_median = region['ELA2']
+
+        # assert(sum(zela > heights) == 0)
+
+        for ela_label, ela in (('mid', ela_mid), ('weighted', ela_weighted),
+                               ('median', ela_median)):
             # Steady
-            zela = heights - lengths*slopes/2
-            zela_nd = zela/Ldim
-            P = (2*zela_nd*cl_nd**(1/q))/(slopes)
+            # zela = heights - lengths*slopes/2
+            # zela_nd = zela/Ldim
+            # P = (2*zela_nd*cl_nd**(1/q))/(slopes)
 
-            all_glaciers.loc[(region_name,), 'P_steady'] = P.values
-
-            sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes)*diff(P)
-
-            all_glaciers.loc[(region_name,), 'sensitivity_steady'] = numpy.float64(sensitivity.values)
-
-            volumes_ss = f_vec(P)
-
-            tau = -(g*(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1)))**(-1)
-
-            all_glaciers.loc[(region_name,), 'tau_steady'] = tau.values
-
-            tau2 = -(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1))**(-1)
-            all_glaciers.loc[(region_name,), 'tau2_steady'] = tau2.values
-
-            # Mid-range
-            ela = (region['Zmax'] + region['Zmin'])/2
             zela = ela/1000 - (region['Zmax']/1000 - region['Thickness'])
             zela_nd = zela/Ldim
-            P = (2*zela_nd*cl_nd**(1/q))/(slopes)
+            P = zela_nd/(ca_nd**(1/gamma))
 
-            all_glaciers.loc[(region_name,), 'P_mid'] = P.values
+            all_glaciers.loc[(region_name,),
+                             'P_{ela_label}'.format(ela_label=ela_label)] = P.values
 
-            sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes)*diff(P)
+            sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
 
-            all_glaciers.loc[(region_name,), 'sensitivity_mid'] = numpy.float64(sensitivity.values)
+            all_glaciers.loc[(region_name,), ('sensitivity_{ela_label}'
+                                              .format(ela_label=ela_label))] = sensitivity.values
 
-            volumes_ss = f_vec(P)
+            volumes_ss = final_volume_vec(G, P, volumes_nd)
 
-            tau = -(g*(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1)))**(-1)
+            tau = -(1/20*G*P**2/volumes_ss**(4/5) - 1/5*G*P/volumes_ss**(3/5)
+                    - 4/5*P/volumes_ss**(1/5) + 3/20*G/volumes_ss**(2/5) - 7/5*volumes_ss**(2/5)
+                    + 1)**(-1)*g_abl**(-1)
 
-            all_glaciers.loc[(region_name,), 'tau_mid'] = tau.values
+            all_glaciers.loc[(region_name,),
+                             'tau_{ela_label}'.format(ela_label=ela_label)] = tau.values
 
-            tau2 = -(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1))**(-1)
-            all_glaciers.loc[(region_name,), 'tau2_mid'] = tau2.values
-
-            # Area-weighted
-            ela = region['ELA']
-            zela = ela/1000 - (region['Zmax']/1000 - region['Thickness'])
-            zela_nd = zela/Ldim
-            P = (2*zela_nd*cl_nd**(1/q))/(slopes)
-
-            all_glaciers.loc[(region_name,), 'P_weighted'] = P.values
-
-            sensitivity = Ldim**(3 - 3/q)*2*cl**(1/q)/(slopes)*diff(P)
-
-            all_glaciers.loc[(region_name,), 'sensitivity_weighted'] = numpy.float64(sensitivity.values)
-
-            volumes_ss = f_vec(P)
-
-            tau = -(g*(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1)))**(-1)
-
-            all_glaciers.loc[(region_name,), 'tau_weighted'] = tau.values
-
-            tau2 = -(1 - alpha*P*(volumes_ss)**(alpha - 1) - delta*(volumes_ss)**(delta - 1))**(-1)
-            all_glaciers.loc[(region_name,), 'tau2_weighted'] = tau2.values
-
-
-            #all_glaciers.loc[(region_name,), 'zela'] = zela.values
-
+            # Also record results for G*=0, g_abl=g
+            sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(0, P, volumes_nd)
 
             #region_volume = sum(volumes.values[((P != float('inf')) & (P < 0.1859) & (sensitivity > -5000)).nonzero()])
             #region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])
