@@ -1,17 +1,17 @@
-import pickle
 import itertools
 
 import numpy
+import pandas
 import sklearn
 import sklearn.cross_validation
 import sklearn.linear_model
 import statsmodels.api as sm
 
-glaciers = pickle.load(open('data/serialized/glaciers_climate', 'br')).dropna()
+glaciers = pandas.read_pickle('data/serialized/glaciers_climate').dropna()
 
 # Mass-balance gradient cannot be negative
 # glaciers = glaciers[glaciers['g_acc'] > 0]
-glaciers = glaciers[glaciers['g'] > 0]
+# glaciers = glaciers[glaciers['g'] > 0]
 
 
 def power_set(iterable):
@@ -26,7 +26,7 @@ cv_list = []
 
 glaciers = glaciers.reindex(numpy.random.permutation(glaciers.index))
 X = glaciers[features]
-y = glaciers['g']
+y = glaciers['g_acc']
 Xnorm = sm.add_constant((X - X.mean())/(X.std()))
 
 i = 0
@@ -45,5 +45,5 @@ for subset in power_set(features):
         error = ((ytest - model.predict(Xtest[['const'] + list(subset)]))**2).mean()
 
         subset_err.append(error)
-    cv_list.append((subset, numpy.mean(subset_err)))
+    cv_list.append((subset, numpy.sqrt(numpy.mean(subset_err))))
     i += 1

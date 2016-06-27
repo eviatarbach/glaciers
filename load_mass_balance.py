@@ -88,10 +88,10 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
                 gradients_abl.append(g_abl)
                 gradients_acc.append(g_acc)
 
-        glaciers.loc[glacier, 'g'] = numpy.mean(gradients)
-        glaciers.loc[glacier, 'g_abl'] = numpy.mean(gradients_abl)
-        glaciers.loc[glacier, 'g_acc'] = numpy.mean(gradients_acc)
-        glaciers.loc[glacier, 'g_abl_std'] = numpy.std(gradients_abl)
-        glaciers.loc[glacier, 'g_acc_std'] = numpy.std(gradients_acc)
+        glaciers.loc[glacier, 'g'] = numpy.mean(gradients)/1000
+        glaciers.loc[glacier, 'g_abl'] = numpy.mean(gradients_abl)/1000
+        glaciers.loc[glacier, 'g_acc'] = numpy.mean(gradients_acc)/1000
+        glaciers.loc[glacier, 'g_abl_std'] = numpy.std(gradients_abl)/1000
+        glaciers.loc[glacier, 'g_acc_std'] = numpy.std(gradients_acc)/1000
 
 glaciers.to_pickle('data/serialized/glaciers_climate')

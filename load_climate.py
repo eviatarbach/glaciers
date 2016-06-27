@@ -1,8 +1,8 @@
 import datetime
-import pickle
 from functools import lru_cache
 
 import numpy
+import pandas
 import netCDF4
 from scipy.stats import linregress
 
@@ -31,10 +31,8 @@ def lapse_rate(glacier_lat_index, glacier_lon_index):
 
     return lapse_mean
 
-with open('data/serialized/glaciers_climate', 'br') as glaciers_file,\
-     open('data/serialized/all_glaciers', 'br') as all_glaciers_file:
-    glaciers = pickle.load(glaciers_file)
-    all_glaciers = pickle.load(all_glaciers_file)
+glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
+all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 with netCDF4.Dataset('data/cru_ts3.23.1901.2014.tmp.dat.nc', 'r') as temp_data,\
      netCDF4.Dataset('data/cru_ts3.23.1901.2014.pre.dat.nc', 'r') as pre_data,\
@@ -118,5 +116,5 @@ with netCDF4.Dataset('data/cru_ts3.23.1901.2014.tmp.dat.nc', 'r') as temp_data,\
             glacier_set.loc[glacier, 'lapse_rate'] = lapse_rate(glacier_lat_index,
                                                                 glacier_lon_index)
 
-all_glaciers.to_pickle('data/serialized/all_glaciers')
 glaciers.to_pickle('data/serialized/glaciers_climate')
+all_glaciers.to_pickle('data/serialized/all_glaciers')
