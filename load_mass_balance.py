@@ -32,6 +32,8 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
 
     glaciers = pandas.DataFrame({'WGMS_ID': names})
     glaciers = glaciers.set_index('WGMS_ID')
+    glaciers_ela = pandas.DataFrame({'WGMS_ID': names, 'year': numpy.nan})
+    glaciers_ela = glaciers_ela.set_index(['WGMS_ID', 'year'])
 
     data_latlon = pandas.read_csv(latlon_file, index_col='WGMS_ID',
                                   usecols=['WGMS_ID', 'LATITUDE', 'LONGITUDE'])
@@ -79,6 +81,8 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
             ela = data_mb.loc[glacier, year]['ela'].iloc[0]
             ela_i = altitudes.searchsorted(ela)
 
+            glaciers_ela.loc[(glacier, year), 'ela'] = ela
+
             # At least 4 mass balance measurements on either side of
             # the ELA
             if (ela_i >= 4) and (len(balance) - ela_i >= 4):
@@ -94,4 +98,9 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
         glaciers.loc[glacier, 'g_abl_std'] = numpy.std(gradients_abl)/1000
         glaciers.loc[glacier, 'g_acc_std'] = numpy.std(gradients_acc)/1000
 
+glaciers_ela.index = glaciers_ela.index.set_levels([glaciers_ela.index.levels[0],
+                                                    glaciers_ela.index.levels[1].astype(int)])
+glaciers_ela = glaciers_ela.dropna()
+
 glaciers.to_pickle('data/serialized/glaciers_climate')
+glaciers_ela.to_pickle('data/serialized/glaciers_ela')

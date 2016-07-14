@@ -167,7 +167,7 @@ with open('data/GlaThiDa_2014/T.csv', 'r', encoding='ISO-8859-1') as glathida_fi
 
     all_glaciers.loc[valid_indices, 'THICK_mean'] = conv['MEAN_THICKNESS'].values[valid_mask]
 
-    all_glaciers.to_pickle('data/serialized/all_glaciers')
+    #all_glaciers.to_pickle('data/serialized/all_glaciers')
 
 # with open('data/MAIL_WGMS/00_rgi50_links.20151130_WithCategories.csv', 'r',
 #           encoding='ISO-8859-1') as id_file:
