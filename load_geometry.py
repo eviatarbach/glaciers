@@ -109,6 +109,7 @@ for i, region in enumerate(RGI_REGIONS):
 
         # replace invalid values with NaN
         region_data['volume'] = region_data['volume'].replace(0, numpy.nan)
+        region_data['THICK_mean'] = region_data['THICK_mean'].replace(0, numpy.nan)
         region_data['LENGTH'] = region_data['LENGTH'].replace(0, numpy.nan)
         region_data['SLOPE_avg'] = region_data['SLOPE_avg'].replace(0, numpy.nan)
         region_data['Slope'] = region_data['Slope'].replace(-9, numpy.nan)
@@ -167,7 +168,7 @@ with open('data/GlaThiDa_2014/T.csv', 'r', encoding='ISO-8859-1') as glathida_fi
 
     all_glaciers.loc[valid_indices, 'THICK_mean'] = conv['MEAN_THICKNESS'].values[valid_mask]
 
-    #all_glaciers.to_pickle('data/serialized/all_glaciers')
+    all_glaciers.to_pickle('data/serialized/all_glaciers')
 
 # with open('data/MAIL_WGMS/00_rgi50_links.20151130_WithCategories.csv', 'r',
 #           encoding='ISO-8859-1') as id_file:

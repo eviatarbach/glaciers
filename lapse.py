@@ -13,11 +13,14 @@ glaciers_ela = pandas.read_pickle('data/serialized/glaciers_ela')
 
 glaciers_ela = glaciers_ela.sortlevel()
 
-# Filter out glaciers that have only one year of data
+# Filter out glaciers that less than fifteen year of data
 glaciers_ela = glaciers_ela[glaciers_ela.count(level='WGMS_ID') >= 15].dropna()
 
 lapses = []
 empirical_lapses = []
+
+dT = []
+dELA = []
 
 with netCDF4.Dataset('data/cru_ts3.23.1901.2014.tmp.dat.nc', 'r') as temp_data:
     temp = temp_data.variables['tmp']
@@ -38,7 +41,9 @@ with netCDF4.Dataset('data/cru_ts3.23.1901.2014.tmp.dat.nc', 'r') as temp_data:
         temps = grid_square_temps.mean(axis=1)[numpy.searchsorted(numpy.array(years)[range(0, len(years), 12)], values[:, 0])]
         altitudes = values[:, 1]
         regression = linregress(temps, altitudes)
-        if regression.rvalue**2 >= 0.1:
+        dELA.append(regression.slope*temps[-1] + regression.intercept - (regression.slope*temps[0] + regression.intercept))
+        dT.append(temps[-1] - temps[0])
+        if regression.pvalue <= 0.05:
             lapses.append(glaciers.loc[glacier, 'lapse_rate'])
             empirical_lapses.append(1/regression.slope)
             glaciers.loc[glacier, 'diff'] = glaciers.loc[glacier, 'lapse_rate'] - regression.slope

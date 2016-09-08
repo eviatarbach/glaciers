@@ -22,6 +22,10 @@ features = ['max_elevation', 'median_elevation', 'continentality', 'summer_tempe
 
 runs = []
 
+glaciers.loc[glaciers['lat'] < 25, 'region'] = 'low'
+glaciers.loc[(glaciers['lat'] >= 25) & (glaciers['lat'] <= 55), 'region'] = 'mid'
+glaciers.loc[glaciers['lat'] > 55, 'region'] = 'high'
+
 for i in range(100):
     print(i)
     for gradient in ['g', 'g_abl', 'g_acc']:
@@ -48,11 +52,12 @@ for i in range(100):
             print(i)
             subset_err = []
             not_null_indices = X_val[list(subset)].notnull().all(axis=1)
-            error = sklearn.cross_validation.cross_val_score(GammaRegressor(),
-                                                             X_val[list(subset)][not_null_indices],
-                                                             y_val[not_null_indices], cv=20,
-                                                             scoring='mean_squared_error')
-            cv_list.append((subset, -error.mean()))
+            for train_index, test_index in sklearn.cross_validation.StratifiedKFold(glaciers.loc[not_null_indices.index, 'region'][not_null_indices]):
+                # print(glaciers.loc[not_null_indices.index, 'region'][not_null_indices].iloc[train_index].value_counts())
+                model = GammaRegressor().fit(X_val[list(subset)][not_null_indices].iloc[train_index], y_val[not_null_indices].iloc[train_index])
+                error = numpy.mean((model.predict(X_val[list(subset)][not_null_indices].iloc[test_index]) - y_val[not_null_indices].iloc[test_index])**2)
+                subset_err.append(error)
+            cv_list.append((subset, numpy.mean(subset_err)))
             i += 1
 
         best_subset = cv_list[numpy.argmin([subset[1] for subset in cv_list])][0]
