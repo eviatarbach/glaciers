@@ -2,20 +2,15 @@ import multiprocessing
 
 import pandas
 import numpy
+import scipy.stats
 
 from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec
-
-
-def truncated_normal(vals, scale, truncate_at=0):
-    sample = numpy.random.normal(0, scale)
-    while any((vals + sample) <= truncate_at):
-        nonpos = (vals + sample) <= truncate_at
-        sample[nonpos.nonzero()[0]] = numpy.random.normal(0, scale[nonpos.nonzero()[0]])
-    return vals + sample
 
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 all_glaciers['ELA_mid'] = (all_glaciers['Zmax'] + all_glaciers['Zmin'])/2
+
+all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
 
 # remove all glaciers whose ELA is above or below the glacier, for some reason
 # all_glaciers = all_glaciers[(all_glaciers['Zmin'] < all_glaciers['ELA'])
@@ -43,46 +38,39 @@ def run(i):
         # heights = heights + (heights <= 0)*region['THICK_mean']
 
         slopes = region['SLOPE_avg']
-
-        # If no slope from Huss data, try RGI
-        slopes.loc[slopes.isnull()] = region['Slope']
-        slopes = truncated_normal(slopes, 0.029*numpy.ones(len(slopes)))
+        slopes = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=slopes,
+                                       scale=0.029).rvs(size=len(slopes))
 
         areas = region['area']
-        if region_name in ['Alaska', 'SouthernAndes']:
-            areas = region['Area']
-        areas.loc[areas.isnull()] = region['Area']
-        areas = truncated_normal(areas, 0.213*areas)
+        areas = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=areas,
+                                      scale=7.3822*areas**0.7).rvs(size=len(areas))
 
         interp_volume_mask = region['interp_volume']
 
         volumes = region['volume']
-        thickness = region['THICK_mean']
-        # Also fill in heights
-        missing_heights = thickness.isnull()
-        thickness.loc[missing_heights] = volumes[missing_heights]/areas[missing_heights]
-        heights = truncated_normal(thickness, 0.3*thickness)
+        heights = region['THICK_mean']
+        heights = scipy.stats.lognorm(scale=heights, s=0.3).rvs(size=len(heights))
 
         # Multiplying area by height instead of using volume directly since we have uncertainty
         # estimates provided in the height, not in the volume.
         volumes.loc[~interp_volume_mask] = areas*heights
 
         # For the rest of the volumes, we need to add the interpolation error
-        volumes.loc[interp_volume_mask] = truncated_normal(volumes[interp_volume_mask],
-                                                           0.223*volumes[interp_volume_mask])
+        volumes.loc[interp_volume_mask] = scipy.stats.lognorm(scale=volumes[interp_volume_mask],
+                                                              s=0.223).rvs(size=sum(interp_volume_mask))
 
         lengths = region['LENGTH']
         interp_length_mask = region['interp_length']
 
-        lengths.loc[~interp_length_mask] = truncated_normal(lengths[~interp_length_mask],
-                                                            1969*numpy.ones(sum(~interp_length_mask)))
+        lengths.loc[~interp_length_mask] = scipy.stats.lognorm(scale=lengths[~interp_length_mask],
+                                                               s=0.2).rvs(size=sum(~interp_length_mask))
 
-        lengths.loc[interp_length_mask] = truncated_normal(lengths[interp_length_mask],
-                                                           0.249*lengths[interp_length_mask])
+        lengths.loc[interp_length_mask] = scipy.stats.lognorm(scale=lengths[interp_length_mask],
+                                                              s=0.249).rvs(size=sum(interp_length_mask))
 
-        g_abl = truncated_normal(region['g_abl'], 0.004774*numpy.ones(len(region['g_abl'])))
-        g_acc = truncated_normal(region['g_acc'], 0.001792*numpy.ones(len(region['g_acc'])),
-                                 -numpy.inf)
+        g_abl = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=region['g_abl'],
+                                      scale=0.004774).rvs(size=len(region['g_abl']))
+        g_acc = scipy.stats.norm(loc=region['g_acc'], scale=0.001792).rvs(size=len(region['g_acc']))
         #g = truncated_normal(region['g'], 0.002712*numpy.ones(len(region['g'])))
 
         G = g_acc/g_abl - 1
@@ -99,8 +87,10 @@ def run(i):
         ca_nd = ca*Ldim**(2*gamma - 3)
 
         # TODO: fix when only one is available, in which case error is 0
-        ela = truncated_normal(region[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean(axis=1),
-                               region[['ELA_mid', 'ELA_weighted', 'ELA_median']].std(axis=1) + 1e-8)
+        ela = region[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean(axis=1)
+        ela = scipy.stats.norm(loc=ela,
+                               scale=region[['ELA_mid', 'ELA_weighted',
+                                             'ELA_median']].std(axis=1).replace(numpy.nan, 0) + 1e-8).rvs(size=len(ela))
 
         # assert(sum(zela > heights) == 0)
 

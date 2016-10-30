@@ -58,4 +58,16 @@ all_glaciers.loc[missing_mask, 'LENGTH'] = numpy.exp(line.intercept)*areas_missi
 all_glaciers['interp_length'] = False
 all_glaciers.loc[missing_mask, 'interp_length'] = True
 
-#all_glaciers.to_pickle('data/serialized/all_glaciers')
+# Set quantities for mismatched regions to the RGI quantities
+all_glaciers.loc[MISSING_REGIONS, 'area'] = all_glaciers['Area']
+all_glaciers.loc[MISSING_REGIONS, 'SLOPE_avg'] = all_glaciers['Slope']
+
+# Fill in null from RGI when missing from Huss data
+all_glaciers.loc[all_glaciers['SLOPE_avg'].isnull(), 'SLOPE_avg'] = all_glaciers['Slope']
+all_glaciers.loc[all_glaciers['area'].isnull(), 'area'] = all_glaciers['Area']
+
+# Fill in thickness
+all_glaciers.loc[all_glaciers['THICK_mean'].isnull(),
+                 'THICK_mean'] = all_glaciers['volume']/all_glaciers['area']
+
+all_glaciers.to_pickle('data/serialized/all_glaciers')

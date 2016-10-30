@@ -28,12 +28,14 @@ def process_glacier(glacier):
     H = glacier_data['THICK_mean']
     A = glacier_data['area']
     beta = glacier_data['SLOPE_avg']
+    if pandas.isnan(beta):
+        beta = glacier_data['Slope']
     Zmax = glacier_data['Zmax']
 
     cl = V/(L**p)
     ca = V/(A**gamma)
 
-    ela = glacier_data[['ELA_mid', 'ELA_weighted', 'ELA_mid']].mean()
+    ela = glacier_data[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean()
     zela = ela - (Zmax - H)
 
     g_abl = glacier_data['g_abl']
@@ -67,8 +69,6 @@ def process_glacier(glacier):
 
 
 def process_region(region):
-    if region in ['AntarcticSubantarctic', 'Alaska', 'SouthernAndes']:
-        return None
     region_vols = numpy.zeros(1128)
     for glacier in all_glaciers.loc[region].index:
         vols = process_glacier((region, glacier))
@@ -76,5 +76,5 @@ def process_region(region):
             region_vols += vols
     return region_vols
 
-pool = multiprocessing.Pool(processes=4)
-all_volumes = pool.map(process_region, RGI_REGIONS)
+# pool = multiprocessing.Pool(processes=4)
+# all_volumes = pool.map(process_region, RGI_REGIONS)

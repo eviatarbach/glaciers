@@ -63,7 +63,7 @@ equation_diff = RationalPowers(numpy.array([fractions.Fraction(-4, 5), fractions
 
 
 def eq_volume(G, P):
-    return equation.find_root(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, -1, 1]))
+    return equation.find_roots(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, -1, 1]))
 
 
 def final_volume(G, P, V):
