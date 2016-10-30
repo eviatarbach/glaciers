@@ -2,6 +2,10 @@ import pandas
 import numpy
 from scipy.stats import linregress
 
+import matplotlib.pyplot as plt
+
+from sklearn.linear_model import TheilSenRegressor
+
 YEAR_START, YEAR_END = 1960, 2014
 NUM_YEARS = YEAR_END - YEAR_START + 1
 
@@ -72,22 +76,34 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
         years = years[(YEAR_START <= years) & (years <= YEAR_END)]
         for year in years:
             # Gradient using slope of linear regression
-            altitudes = data_mb.loc[glacier, year]['ALTITUDE'].values
+            altitudes = data_mb.loc[glacier, year]['ALTITUDE'].values.reshape(-1, 1)
             balance = data_mb.loc[glacier, year]['ANNUAL_BALANCE'].values
 
-            g = linregress(altitudes, balance).slope
+            g = linregress(altitudes.T, balance).slope
             gradients.append(g)
 
             ela = data_mb.loc[glacier, year]['ela'].iloc[0]
-            ela_i = altitudes.searchsorted(ela)
+            ela_i = altitudes.T[0].searchsorted(ela)
 
             glaciers_ela.loc[(glacier, year), 'ela'] = ela
 
             # At least 4 mass balance measurements on either side of
             # the ELA
             if (ela_i >= 4) and (len(balance) - ela_i >= 4):
-                g_abl = linregress(altitudes[:ela_i], balance[:ela_i]).slope
-                g_acc = linregress(altitudes[ela_i:], balance[ela_i:]).slope
+                if balance[-1] < 0:
+                    # Apparently some error in the data, where negative balance is above the ELA.
+                    # Skip these years.
+                    continue
+                abl_line = TheilSenRegressor().fit(altitudes[:ela_i], balance[:ela_i])#linregress(altitudes[:ela_i], balance[:ela_i])
+                acc_line = TheilSenRegressor().fit(altitudes[ela_i:], balance[ela_i:])#linregress(altitudes[ela_i:], balance[ela_i:])
+
+                g_abl = abl_line.coef_
+                g_acc = acc_line.coef_
+
+                #plt.scatter(altitudes, balance)
+                #plt.plot(altitudes[:ela_i], abl_line.predict(altitudes[:ela_i]))
+                #plt.plot(altitudes[ela_i:], acc_line.predict(altitudes[ela_i:]))
+                #plt.show()
 
                 gradients_abl.append(g_abl)
                 gradients_acc.append(g_acc)

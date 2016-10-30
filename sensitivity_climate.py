@@ -31,6 +31,7 @@ all_glaciers = all_glaciers[~all_glaciers['SLOPE_avg'].isnull() | ~all_glaciers[
 iterations = 0
 
 def run(i):
+    numpy.random.seed()
     global iterations
     iterations += 1
     print(iterations)
@@ -45,7 +46,7 @@ def run(i):
 
         # If no slope from Huss data, try RGI
         slopes.loc[slopes.isnull()] = region['Slope']
-        slopes = truncated_normal(slopes, 0.032*numpy.ones(len(slopes)))
+        slopes = truncated_normal(slopes, 0.029*numpy.ones(len(slopes)))
 
         areas = region['area']
         if region_name in ['Alaska', 'SouthernAndes']:
@@ -62,23 +63,22 @@ def run(i):
         thickness.loc[missing_heights] = volumes[missing_heights]/areas[missing_heights]
         heights = truncated_normal(thickness, 0.3*thickness)
 
-        # ????
         # Multiplying area by height instead of using volume directly since we have uncertainty
         # estimates provided in the height, not in the volume.
         volumes.loc[~interp_volume_mask] = areas*heights
 
         # For the rest of the volumes, we need to add the interpolation error
         volumes.loc[interp_volume_mask] = truncated_normal(volumes[interp_volume_mask],
-                                                           0.224*volumes[interp_volume_mask])
+                                                           0.223*volumes[interp_volume_mask])
 
         lengths = region['LENGTH']
         interp_length_mask = region['interp_length']
 
         lengths.loc[~interp_length_mask] = truncated_normal(lengths[~interp_length_mask],
-                                                            0.371*lengths[~interp_length_mask])
+                                                            1969*numpy.ones(sum(~interp_length_mask)))
 
         lengths.loc[interp_length_mask] = truncated_normal(lengths[interp_length_mask],
-                                                           0.251*lengths[interp_length_mask])
+                                                           0.249*lengths[interp_length_mask])
 
         g_abl = truncated_normal(region['g_abl'], 0.004774*numpy.ones(len(region['g_abl'])))
         g_acc = truncated_normal(region['g_acc'], 0.001792*numpy.ones(len(region['g_acc'])),
@@ -86,6 +86,8 @@ def run(i):
         #g = truncated_normal(region['g'], 0.002712*numpy.ones(len(region['g'])))
 
         G = g_acc/g_abl - 1
+
+        run_data.loc[(region_name,), 'G'] = G.values
 
         cl = volumes/(lengths**p)
         ca = volumes/(areas**gamma)
@@ -97,8 +99,8 @@ def run(i):
         ca_nd = ca*Ldim**(2*gamma - 3)
 
         # TODO: fix when only one is available, in which case error is 0
-        ela = truncated_normal(region[['ELA_mid', 'ELA_weighted', 'ELA_mid']].mean(axis=1),
-                               region[['ELA_mid', 'ELA_weighted', 'ELA_mid']].std(axis=1) + 1e-8)
+        ela = truncated_normal(region[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean(axis=1),
+                               region[['ELA_mid', 'ELA_weighted', 'ELA_median']].std(axis=1) + 1e-8)
 
         # assert(sum(zela > heights) == 0)
 
@@ -139,12 +141,12 @@ def run(i):
         # tau_gz = (4/5*P/volumes_ss_gz**(1/5) + 7/5*volumes_ss_gz**(2/5) - 1)**(-1)*g**(-1)
 
         # run_data.loc[(region_name,), 'tau_gz'] = tau_gz
-    return run_data[['P', 'sensitivity', 'volumes_ss', 'tau']]
+    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau']]
 
-#pool = multiprocessing.Pool(processes=4)
-#all_data = pool.map(run, range(100))
+pool = multiprocessing.Pool(processes=4)
+all_data = pool.map(run, range(100))
 # all_glaciers.to_pickle('data/serialized/all_glaciers')
-        #region_volume = sum(volumes.values[((P != float('in%debf')) & (P < 0.1859) & (sensitivity > -5000)).nonzero()])
+        #region_volume = sum(volumes.values[((P != float('inf')) & (P < 0.1859) & (sensitivity > -5000)).nonzero()])
         #region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])
 
         #sensitivity = sensitivity[sensitivity > -5000]

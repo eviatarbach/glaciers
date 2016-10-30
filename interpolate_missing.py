@@ -58,4 +58,4 @@ all_glaciers.loc[missing_mask, 'LENGTH'] = numpy.exp(line.intercept)*areas_missi
 all_glaciers['interp_length'] = False
 all_glaciers.loc[missing_mask, 'interp_length'] = True
 
-all_glaciers.to_pickle('data/serialized/all_glaciers')
+#all_glaciers.to_pickle('data/serialized/all_glaciers')

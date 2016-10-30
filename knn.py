@@ -38,7 +38,7 @@ for train, test in sklearn.cross_validation.KFold(len(glaciers), n_folds=20):
 
     res2 = model.predict(Xnorm.iloc[test, :][['const', 'max_elevation', 'cloud_cover']])
 
-    res = 0.6*res1 + 0.4*res2
+    res = 0.5*res1 + 0.5*res2
 
     error = ((ytest - res)**2).mean()
 
