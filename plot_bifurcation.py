@@ -31,7 +31,7 @@ c1v = numpy.vectorize(c1)
 c2v = numpy.vectorize(c2)
 
 Gmin, Gmax = -1.2, 1.0
-Pmin, Pmax = -45, 10
+Pmin, Pmax = -50, 10
 
 G = numpy.linspace(Gmin, Gmax, 30)
 G_neg = numpy.linspace(Gmin, 0, 15)
@@ -54,3 +54,22 @@ ax.plot_wireframe(Gmesh, Pmesh, Z2, alpha=0.5, cstride=1, rstride=1, color='blac
 ax.plot_wireframe(Gmesh, Pmesh, Z1, alpha=1, cstride=1, rstride=1, color='black',
                   linestyle='dashdot')
 ax.plot_wireframe(Gmesh_neg, Pmesh_neg, Z0_neg, alpha=0.5, cstride=1, rstride=1, color='black')
+plt.rc('text', usetex=True)
+ax.xaxis.set_rotate_label(False)
+ax.yaxis.set_rotate_label(False)
+ax.zaxis.set_rotate_label(False)
+ax.set_xlabel('$G^*$', fontsize=22)
+ax.set_ylabel('$P^*$', fontsize=22)
+ax.set_zlabel('$V_s^*$', fontsize=22)
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
+for t in ax.xaxis.get_major_ticks():
+    t.set_pad(-2.5)
+for t in ax.yaxis.get_major_ticks():
+    t.set_pad(-5)
+for t in ax.zaxis.get_major_ticks():
+    t.label.set_fontsize(18)
+    t.set_pad(2)
+yticks = ax.yaxis.get_major_ticks()
+yticks[0].label1.set_visible(False)
+plt.show()

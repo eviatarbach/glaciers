@@ -102,6 +102,11 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['ELA_weighted'] = (altitudes*hypso_data[hypso_data.columns[2:]]
                                        /1000).sum(axis=1)
 
+        region_data['second_moment'] = (altitudes**2*hypso_data[hypso_data.columns[2:]]
+                                       /1000).sum(axis=1)
+
+        region_data['hypso_cells'] = (hypso_data[hypso_data.columns[2:]] != 0).sum(axis=1)
+
         # median altitude
         region_data['ELA_median'] = median_elev(hypso_data[hypso_data.columns[2:]], altitudes)
 
@@ -112,6 +117,7 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['THICK_mean'] = region_data['THICK_mean'].replace(0, numpy.nan)
         region_data['LENGTH'] = region_data['LENGTH'].replace(0, numpy.nan)
         region_data['SLOPE_avg'] = region_data['SLOPE_avg'].replace(0, numpy.nan)
+        region_data['Slope'] = region_data['Slope'].replace(0, numpy.nan)
         region_data['Slope'] = region_data['Slope'].replace(-9, numpy.nan)
         region_data['Lmax'] = region_data['Lmax'].replace(-9, numpy.nan)
 
@@ -128,7 +134,9 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['LENGTH'] *= 1000
 
         # restrict to glacier type
-        region_data = region_data[region_data['GlacType'].str[0] == '0']
+        region_data = region_data[(region_data['GlacType'].str[0] == '0')
+                                  & (region_data['GlacType'].str[1] == '0')
+                                  & (region_data['RGIFlag'].str[0] == '0')]
 
         # remove tidewater glaciers, ones that have minimum altitude of 0
         region_data = region_data[region_data['Zmin'] > 0]
@@ -170,19 +178,19 @@ with open('data/GlaThiDa_2014/T.csv', 'r', encoding='ISO-8859-1') as glathida_fi
 
     all_glaciers.to_pickle('data/serialized/all_glaciers')
 
-# with open('data/MAIL_WGMS/00_rgi50_links.20151130_WithCategories.csv', 'r',
-#           encoding='ISO-8859-1') as id_file:
-#     # Load slope and aspect data into WGMS data
-#     data = data.set_index(['RGIId'])
-#
-#     data_id = pandas.read_csv(id_file, usecols=['RGIId', 'FoGId'], index_col=['FoGId'])
-#
-#     glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
-#
-#     conv = data_id.loc[glaciers.index.values].dropna()
-#
-#     rgi_ids = list(conv.values.flatten())
-#
-#     conv['Slope'] = data.loc[rgi_ids]['Slope'].values
-#     conv['Aspect'] = data.loc[rgi_ids]['Aspect'].values
-#     glaciers[['slope', 'aspect']] = conv[['Slope', 'Aspect']]
+with open('data/MAIL_WGMS/00_rgi50_links.20151130_WithCategories.csv', 'r',
+          encoding='ISO-8859-1') as id_file:
+    # Load slope and aspect data into WGMS data
+    data = data.set_index(['RGIId'])
+
+    data_id = pandas.read_csv(id_file, usecols=['RGIId', 'FoGId'], index_col=['FoGId'])
+
+    glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
+
+    conv = data_id.loc[glaciers.index.values].dropna()
+
+    rgi_ids = list(conv.values.flatten())
+
+    conv['Slope'] = data.loc[rgi_ids]['Slope'].values
+    conv['Aspect'] = data.loc[rgi_ids]['Aspect'].values
+    glaciers[['slope', 'aspect']] = conv[['Slope', 'Aspect']]

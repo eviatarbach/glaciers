@@ -1,3 +1,5 @@
+import pandas
+
 with open('data/MAIL_WGMS/00_rgi50_links.20151130_WithCategories.csv', 'r',
        encoding='ISO-8859-1') as id_file:
     # Load slope and aspect data into WGMS data

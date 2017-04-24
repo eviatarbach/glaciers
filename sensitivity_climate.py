@@ -1,4 +1,5 @@
 import multiprocessing
+import pickle
 
 import pandas
 import numpy
@@ -22,10 +23,15 @@ all_glaciers = all_glaciers.sort_index(level=[0, 1])
 
 # Drop glaciers that have no slope information
 all_glaciers = all_glaciers[~all_glaciers['SLOPE_avg'].isnull() | ~all_glaciers['Slope'].isnull()]
+# all_glaciers = all_glaciers[all_glaciers['Slope'] != 0]
 
 iterations = 0
 
-def run(i):
+ERRS = {'slope': 0.029, 'height': 0.3, 'vol_interp': 0.223, 'length': 0.2, 'length_interp': 0.249,
+        'g_abl': 0.004774, 'g_acc': 0.001792}
+
+
+def run(i, ensemble=True):
     numpy.random.seed()
     global iterations
     iterations += 1
@@ -38,39 +44,49 @@ def run(i):
         # heights = heights + (heights <= 0)*region['THICK_mean']
 
         slopes = region['SLOPE_avg']
-        slopes = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=slopes,
-                                       scale=0.029).rvs(size=len(slopes))
+        if ensemble:
+            slopes = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=slopes,
+                                           scale=ERRS['slope']).rvs(size=len(slopes))
 
         areas = region['area']
-        areas = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=areas,
-                                      scale=7.3822*areas**0.7).rvs(size=len(areas))
+        if ensemble:
+            areas = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=areas,
+                                          scale=7.3822*areas**0.7).rvs(size=len(areas))
 
         interp_volume_mask = region['interp_volume']
 
         volumes = region['volume']
         heights = region['THICK_mean']
-        heights = scipy.stats.lognorm(scale=heights, s=0.3).rvs(size=len(heights))
+        if ensemble:
+            heights = scipy.stats.lognorm(scale=heights, s=ERRS['height']).rvs(size=len(heights))
 
         # Multiplying area by height instead of using volume directly since we have uncertainty
         # estimates provided in the height, not in the volume.
         volumes.loc[~interp_volume_mask] = areas*heights
 
-        # For the rest of the volumes, we need to add the interpolation error
-        volumes.loc[interp_volume_mask] = scipy.stats.lognorm(scale=volumes[interp_volume_mask],
-                                                              s=0.223).rvs(size=sum(interp_volume_mask))
+        if ensemble:
+            # For the rest of the volumes, we need to add the interpolation error
+            volumes.loc[interp_volume_mask] = scipy.stats.lognorm(scale=volumes[interp_volume_mask],
+                                                                  s=ERRS['vol_interp']).rvs(size=sum(interp_volume_mask))
 
-        lengths = region['LENGTH']
+        lengths = region['Lmax']
         interp_length_mask = region['interp_length']
 
-        lengths.loc[~interp_length_mask] = scipy.stats.lognorm(scale=lengths[~interp_length_mask],
-                                                               s=0.2).rvs(size=sum(~interp_length_mask))
+        if ensemble:
+            lengths.loc[~interp_length_mask] = scipy.stats.lognorm(scale=lengths[~interp_length_mask],
+                                                                   s=ERRS['length']).rvs(size=sum(~interp_length_mask))
 
-        lengths.loc[interp_length_mask] = scipy.stats.lognorm(scale=lengths[interp_length_mask],
-                                                              s=0.249).rvs(size=sum(interp_length_mask))
+            lengths.loc[interp_length_mask] = scipy.stats.lognorm(scale=lengths[interp_length_mask],
+                                                                  s=ERRS['length_interp']).rvs(size=sum(interp_length_mask))
 
-        g_abl = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=region['g_abl'],
-                                      scale=0.004774).rvs(size=len(region['g_abl']))
-        g_acc = scipy.stats.norm(loc=region['g_acc'], scale=0.001792).rvs(size=len(region['g_acc']))
+        g_abl = region['g_abl']
+        g_acc = region['g_acc']
+
+        if ensemble:
+            g_abl = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=g_abl,
+                                          scale=ERRS['g_abl']).rvs(size=len(g_abl))
+
+            g_acc = scipy.stats.norm(loc=g_acc, scale=ERRS['g_acc']).rvs(size=len(g_acc))
         #g = truncated_normal(region['g'], 0.002712*numpy.ones(len(region['g'])))
 
         G = g_acc/g_abl - 1
@@ -88,9 +104,10 @@ def run(i):
 
         # TODO: fix when only one is available, in which case error is 0
         ela = region[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean(axis=1)
-        ela = scipy.stats.norm(loc=ela,
-                               scale=region[['ELA_mid', 'ELA_weighted',
-                                             'ELA_median']].std(axis=1).replace(numpy.nan, 0) + 1e-8).rvs(size=len(ela))
+        if ensemble:
+            ela = scipy.stats.norm(loc=ela,
+                                   scale=region[['ELA_mid', 'ELA_weighted',
+                                                 'ELA_median']].std(axis=1).replace(numpy.nan, 0) + 1e-8).rvs(size=len(ela))
 
         # assert(sum(zela > heights) == 0)
 
@@ -133,8 +150,11 @@ def run(i):
         # run_data.loc[(region_name,), 'tau_gz'] = tau_gz
     return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau']]
 
-pool = multiprocessing.Pool(processes=4)
-all_data = pool.map(run, range(100))
+
+def run_all():
+    pool = multiprocessing.Pool(processes=4)
+    all_data = pool.map(run, range(100))
+    pickle.dump(all_data, open('all_data', 'wb'))
 # all_glaciers.to_pickle('data/serialized/all_glaciers')
         #region_volume = sum(volumes.values[((P != float('inf')) & (P < 0.1859) & (sensitivity > -5000)).nonzero()])
         #region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])

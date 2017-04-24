@@ -47,23 +47,27 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
                  'centraleurope', 'caucasus', 'centralasiaN', 'centralasiaW', 'centralasiaS',
                  'lowlatitudes', 'southernandes', 'newzealand', 'antarctic']
 
-p = 5/3
-gamma = 5/4
+gamma = fractions.Fraction(5, 4)
+p = gamma + (gamma*(1 - gamma))/(gamma - 2)
 
-# Equation is 1/4*G*P^2*V^(1/5) - 1/2*G*P*V^(2/5) - P*V^(4/5) + 1/4*G*V^(3/5) - V^(7/5) + V
-equation = RationalPowers(numpy.array([fractions.Fraction(1, 5), fractions.Fraction(2, 5),
-                                       fractions.Fraction(4, 5), fractions.Fraction(3, 5),
-                                       fractions.Fraction(7, 5), 1]))
+# Equation is 1/4*G*P^2*V^(1/gamma - 1/p) - 1/2*G*P*V^(-1/p + 1) - P*V^(1/gamma)
+#              + 1/4*G*V^(-1/gamma - 1/p + 2) + V - V^(1/gamma + 1/p)
+
+equation = RationalPowers(numpy.array([1/gamma - 1/p, 1 - 1/p, 1/gamma, 2 - 1/gamma - 1/p,
+                                       1, 1/gamma + 1/p]))
 
 # Derivative of the above, in order to evaluate stability
-# 1/20*G*P^2/V^(4/5) - 1/5*G*P/V^(3/5) - 4/5*P/V^(1/5) + 3/20*G/V^(2/5) - 7/5*V^(2/5) + 1
-equation_diff = RationalPowers(numpy.array([fractions.Fraction(-4, 5), fractions.Fraction(-3, 5),
-                                            fractions.Fraction(-1, 5), fractions.Fraction(-2, 5),
-                                            fractions.Fraction(2, 5), 0]))
+# 1/4*G*P^2*V^(1/gamma - 1/p - 1)*(1/gamma - 1/p)
+#  - 1/4*G*V^(-1/gamma - 1/p + 1)*(1/gamma + 1/p - 2)
+#  - V^(1/gamma + 1/p - 1)*(1/gamma + 1/p) + 1/2*G*P*(1/p - 1)/V^(1/p)
+#  - P*V^(1/gamma - 1)/gamma + 1
+
+equation_diff = RationalPowers(numpy.array([1/gamma - 1/p - 1, -1/gamma - 1/p + 1,
+                                            1/gamma + 1/p - 1, -1/p, 1/gamma - 1, 0]))
 
 
 def eq_volume(G, P):
-    return equation.find_roots(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, -1, 1]))
+    return equation.find_roots(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, 1, -1]))
 
 
 def final_volume(G, P, V):
@@ -82,7 +86,8 @@ def final_volume(G, P, V):
 
 
 def stability(G, P, V):
-    terms = numpy.array([1/20*G*P**2, -1/5*G*P, -4/5*P, 3/20*G, -7/5, 1])
+    terms = numpy.array([1/4*G*P**2*(1/gamma - 1/p), -1/4*G*(1/gamma + 1/p - 2),
+                         -(1/gamma + 1/p), 1/2*G*P*(1/p - 1), -P/gamma, 1])
     if V == 0:
         # As V -> 0, the term with the most negative exponent dominates
         nonzero = numpy.nonzero(terms)
@@ -97,3 +102,6 @@ def diff(G, P, V, dP=1e-5):
 
 final_volume_vec = numpy.vectorize(final_volume)
 diff_vec = numpy.vectorize(diff)
+
+gamma = float(gamma)
+p = float(p)

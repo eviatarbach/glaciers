@@ -82,7 +82,7 @@ for glacier in all_glaciers.index:
     else:
         glm_acc_res = glm_acc.predict(sm.add_constant((all_glaciers.loc[[glacier], ACC_FEATURES]
                                                        - acc_mean)/acc_std))
-        acc_res = 0.6*neighbour_acc_res + 0.4*glm_acc_res
+        acc_res = 0.5*neighbour_acc_res + 0.5*glm_acc_res
 
     neighbour_g_res = neighbours_g.predict(numpy.radians(all_glaciers.loc[[glacier],
                                                                           ['lat', 'lon']]))
