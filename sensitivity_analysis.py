@@ -1,3 +1,12 @@
+"""
+Perform Sobol sensitivity analysis on the climate sensitivity and response time of glaciers.
+
+This is done by estimating the empirical distributions of the model parameters, sampling from the
+distributions using low-discrepancy sequences, and computing the Sobol estimators. Note that Sobol
+sensitivity analysis assumes the parameter distributions are independent, which is not true in this
+case.
+"""
+
 import pandas
 import numpy
 import scipy.stats
@@ -50,6 +59,12 @@ zela = ela - (all_glaciers['Zmax'] - all_glaciers['THICK_mean'])
 
 
 def kde_ppf(data):
+    """
+    Return the inverse CDF (PPF) of the empirical distribution.
+
+    The empirical distribution is approximated through Gaussian kernel density estimation of the
+    given data.
+    """
     kde = scipy.stats.gaussian_kde(data)
 
     def cdf(x):
@@ -82,6 +97,7 @@ tau_sample = saltelli.sample(prob_tau, 10000, calc_second_order=True)
 
 
 def sens_glacier(param_vals):
+    """Compute the sensitivity of the glaciers with parameters given in `param_vals`."""
     G = G_ppf(param_vals[:, 0])
     zela = zela_ppf(param_vals[:, 1])
     ca = ca_ppf(param_vals[:, 2])
@@ -99,6 +115,7 @@ def sens_glacier(param_vals):
 
 
 def tau_glacier(param_vals):
+    """Compute the response time of the glaciers with parameters given in `param_vals`."""
     g_acc = g_acc_ppf(param_vals[:, 0])
     g_abl = g_abl_ppf(param_vals[:, 1])
     G = g_acc/g_abl - 1
@@ -124,6 +141,6 @@ def tau_glacier(param_vals):
 sensitivity = sens_glacier(sens_sample)
 tau = tau_glacier(tau_sample)
 
-# complete Sobol' sensitivity analysis
+# Complete Sobol sensitivity analysis
 sobol_sens = sobol.analyze(prob_sens, sensitivity, calc_second_order=True)
 sobol_tau = sobol.analyze(prob_tau, tau, calc_second_order=True)
