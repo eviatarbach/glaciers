@@ -62,14 +62,23 @@ zela_ppf = kde_ppf(zela)
 G_ppf = kde_ppf(G)
 ca_ppf = kde_ppf(ca)
 slopes_ppf = kde_ppf(all_glaciers['SLOPE_avg'].dropna())
+lapse_rate_ppf = kde_ppf(all_glaciers['lapse_rate'])
+g_acc_ppf = kde_ppf(all_glaciers['g_acc'])
+g_abl_ppf = kde_ppf(all_glaciers['g_abl'])
 
 # Set unif(0, 1) distributions for inverse transform sampling
-prob = {'num_vars': 6, 'names': ['G', 'zela', 'ca', 'cl', 'slope', 'volume'],
-        'bounds': [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0]],
-        'dists': ['unif', 'unif', 'unif', 'unif', 'unif', 'unif']}
+prob_sens = {'num_vars': 7, 'names': ['G', 'zela', 'ca', 'cl', 'slope', 'volume', 'lapse_rate'],
+             'bounds': [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0],
+                        [0.0, 1.0]],
+             'dists': ['unif', 'unif', 'unif', 'unif', 'unif', 'unif', 'unif']}
+prob_tau = {'num_vars': 7, 'names': ['g_acc', 'g_abl', 'zela', 'ca', 'cl', 'slope', 'volume'],
+            'bounds': [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0], [0.0, 1.0],
+                       [0.0, 1.0]],
+            'dists': ['unif', 'unif', 'unif', 'unif', 'unif', 'unif', 'unif']}
 
 # Generate parameter values
-param_vals = saltelli.sample(prob, 10000, calc_second_order=False)
+sens_sample = saltelli.sample(prob_sens, 10000, calc_second_order=True)
+tau_sample = saltelli.sample(prob_tau, 10000, calc_second_order=True)
 
 
 def sens_glacier(param_vals):
@@ -77,6 +86,7 @@ def sens_glacier(param_vals):
     zela = zela_ppf(param_vals[:, 1])
     ca = ca_ppf(param_vals[:, 2])
     slopes = slopes_ppf(param_vals[:, 4])
+    lapse_rate = lapse_rate_ppf(param_vals[:, 6])
     cl = scipy.stats.lognorm.ppf(param_vals[:, 3], *cl_params)
     volumes = scipy.stats.lognorm.ppf(param_vals[:, 5], *volume_params)
     Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
@@ -84,13 +94,36 @@ def sens_glacier(param_vals):
     zela_nd = zela/Ldim
     volumes_nd = volumes/Ldim**3
     P = zela_nd/(ca_nd**(1/gamma))
-    sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
+    sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rate**(-1)
+    return sensitivity
+
+
+def tau_glacier(param_vals):
+    g_acc = g_acc_ppf(param_vals[:, 0])
+    g_abl = g_abl_ppf(param_vals[:, 1])
+    G = g_acc/g_abl - 1
+    zela = zela_ppf(param_vals[:, 2])
+    ca = ca_ppf(param_vals[:, 3])
+    slopes = slopes_ppf(param_vals[:, 5])
+    cl = scipy.stats.lognorm.ppf(param_vals[:, 4], *cl_params)
+    volumes = scipy.stats.lognorm.ppf(param_vals[:, 6], *volume_params)
+    Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
+    ca_nd = ca*Ldim**(2*gamma - 3)
+    zela_nd = zela/Ldim
+    volumes_nd = volumes/Ldim**3
+    P = zela_nd/(ca_nd**(1/gamma))
     volumes_ss = final_volume_vec(G, P, volumes_nd)*Ldim**3
-    return sensitivity/volumes_ss
+    tau = -(1/20*G*P**2/volumes_ss**(4/5) - 1/5*G*P/volumes_ss**(3/5)
+            - 4/5*P/volumes_ss**(1/5) + 3/20*G/volumes_ss**(2/5) - 7/5*volumes_ss**(2/5)
+            + 1)**(-1)*g_abl**(-1)
+    tau[volumes_ss == 0] = 0
+    return tau
 
 
 # Calculate model output
-Y_dists_code = sens_glacier(param_vals)
+sensitivity = sens_glacier(sens_sample)
+tau = tau_glacier(tau_sample)
 
 # complete Sobol' sensitivity analysis
-Si_dists_code = sobol.analyze(prob, Y_dists_code, calc_second_order=False)
+sobol_sens = sobol.analyze(prob_sens, sensitivity, calc_second_order=True)
+sobol_tau = sobol.analyze(prob_tau, tau, calc_second_order=True)
