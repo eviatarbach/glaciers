@@ -12,8 +12,9 @@ import numpy
 import scipy.stats
 from SALib.sample import saltelli
 from SALib.analyze import sobol
-from data import p, gamma, diff_vec, final_volume_vec
 from scipy.interpolate import interp1d
+
+from data import p, gamma, diff_vec, final_volume_vec
 
 
 # Modified version of function from statsmodels.distributions.empirical_distribution
@@ -44,8 +45,8 @@ cl = all_glaciers['volume']/all_glaciers['Lmax']**p
 ca = all_glaciers['volume']/all_glaciers['area']**gamma
 
 # Fit the empirical distributions
-cl_params = scipy.stats.lognorm.fit(cl)
-volume_params = scipy.stats.lognorm.fit(all_glaciers['volume'])
+# cl_params = scipy.stats.lognorm.fit(cl)
+# volume_params = scipy.stats.lognorm.fit(all_glaciers['volume'])
 
 # TODO: remove repeated processing
 all_glaciers['ELA_mid'] = (all_glaciers['Zmax'] + all_glaciers['Zmin'])/2
@@ -73,13 +74,13 @@ def kde_ppf(data):
     return monotone_fn_inverter(numpy.vectorize(cdf), numpy.linspace(min(data), max(data), 1000))
 
 
-zela_ppf = kde_ppf(zela)
-G_ppf = kde_ppf(G)
-ca_ppf = kde_ppf(ca)
-slopes_ppf = kde_ppf(all_glaciers['SLOPE_avg'].dropna())
-lapse_rate_ppf = kde_ppf(all_glaciers['lapse_rate'])
-g_acc_ppf = kde_ppf(all_glaciers['g_acc'])
-g_abl_ppf = kde_ppf(all_glaciers['g_abl'])
+# zela_ppf = kde_ppf(zela)
+# G_ppf = kde_ppf(G)
+# ca_ppf = kde_ppf(ca)
+# slopes_ppf = kde_ppf(all_glaciers['SLOPE_avg'].dropna())
+# lapse_rate_ppf = kde_ppf(all_glaciers['lapse_rate'])
+# g_acc_ppf = kde_ppf(all_glaciers['g_acc'])
+# g_abl_ppf = kde_ppf(all_glaciers['g_abl'])
 
 # Set unif(0, 1) distributions for inverse transform sampling
 prob_sens = {'num_vars': 7, 'names': ['G', 'zela', 'ca', 'cl', 'slope', 'volume', 'lapse_rate'],
@@ -92,8 +93,8 @@ prob_tau = {'num_vars': 7, 'names': ['g_acc', 'g_abl', 'zela', 'ca', 'cl', 'slop
             'dists': ['unif', 'unif', 'unif', 'unif', 'unif', 'unif', 'unif']}
 
 # Generate parameter values
-sens_sample = saltelli.sample(prob_sens, 10000, calc_second_order=True)
-tau_sample = saltelli.sample(prob_tau, 10000, calc_second_order=True)
+# sens_sample = saltelli.sample(prob_sens, 10000, calc_second_order=True)
+# tau_sample = saltelli.sample(prob_tau, 10000, calc_second_order=True)
 
 
 def sens_glacier(param_vals):
@@ -138,9 +139,9 @@ def tau_glacier(param_vals):
 
 
 # Calculate model output
-sensitivity = sens_glacier(sens_sample)
-tau = tau_glacier(tau_sample)
+# sensitivity = sens_glacier(sens_sample)
+# tau = tau_glacier(tau_sample)
 
 # Complete Sobol sensitivity analysis
-sobol_sens = sobol.analyze(prob_sens, sensitivity, calc_second_order=True)
-sobol_tau = sobol.analyze(prob_tau, tau, calc_second_order=True)
+# sobol_sens = sobol.analyze(prob_sens, sensitivity, calc_second_order=True)
+# sobol_tau = sobol.analyze(prob_tau, tau, calc_second_order=True)

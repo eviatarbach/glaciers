@@ -25,17 +25,12 @@ all_glaciers = all_glaciers.sort_index(level=[0, 1])
 all_glaciers = all_glaciers[~all_glaciers['SLOPE_avg'].isnull() | ~all_glaciers['Slope'].isnull()]
 # all_glaciers = all_glaciers[all_glaciers['Slope'] != 0]
 
-iterations = 0
-
 ERRS = {'slope': 0.029, 'height': 0.3, 'vol_interp': 0.223, 'length': 0.2, 'length_interp': 0.249,
         'g_abl': 0.004774, 'g_acc': 0.001792}
 
 
 def run(i, ensemble=True):
     numpy.random.seed()
-    global iterations
-    iterations += 1
-    print(iterations)
     run_data = all_glaciers.copy()
     for i, region_name in enumerate(RGI_REGIONS):
         region = run_data.loc[region_name]
