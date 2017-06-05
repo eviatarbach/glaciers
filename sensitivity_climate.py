@@ -7,11 +7,24 @@ import scipy.stats
 
 from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec
 
+
+def sample_reject(means, cov, a, b):
+    samples = numpy.zeros([len(means), 2])
+    for i, mean in enumerate(means):
+        dist = scipy.stats.multivariate_normal(mean=mean, cov=cov)
+        sample = dist.rvs(size=10)
+        mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
+                & (sample[:, 0]/sample[:, 1] > a))
+        while sum(mask) == 0:
+            sample = dist.rvs(size=10)
+            mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
+                    & (sample[:, 0]/sample[:, 1] > a))
+        samples[i, :] = sample[numpy.where(mask)[0][0]]
+    return samples[:, 0], samples[:, 1]
+
+
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
-
-all_glaciers['ELA_mid'] = (all_glaciers['Zmax'] + all_glaciers['Zmin'])/2
-
-all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
+glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
 # remove all glaciers whose ELA is above or below the glacier, for some reason
 # all_glaciers = all_glaciers[(all_glaciers['Zmin'] < all_glaciers['ELA'])
@@ -21,15 +34,23 @@ region_volumes = []
 
 all_glaciers = all_glaciers.sort_index(level=[0, 1])
 
-# Drop glaciers that have no slope information
-all_glaciers = all_glaciers[~all_glaciers['SLOPE_avg'].isnull() | ~all_glaciers['Slope'].isnull()]
-# all_glaciers = all_glaciers[all_glaciers['Slope'] != 0]
+# The amount to adjust the median, area-weighted mean, or mid-range altitude to estimate the
+# balanced-budget ELA
+ELA_CONV = {'ela_mid': -27,  # Braithwaite & Raper, 2009
+            'ela_weighted': -36}  # Braithwaite, 2015
 
-ERRS = {'slope': 0.029, 'height': 0.3, 'vol_interp': 0.223, 'length': 0.2, 'length_interp': 0.249,
-        'g_abl': 0.004774, 'g_acc': 0.001792}
+ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 2012)
+        'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
+        'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
+        'length_interp': 0.249,  # root-mean square relative error in interpolating length
+        'g_abl': 0.005657,  # root-mean square error in interpolating g_abl
+        'g_acc': 0.002203,  # root-mean square error in interpolating g_acc
+        'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
+        'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
 
 
 def run(i, ensemble=True):
+    print(i)
     numpy.random.seed()
     run_data = all_glaciers.copy()
     for i, region_name in enumerate(RGI_REGIONS):
@@ -40,13 +61,15 @@ def run(i, ensemble=True):
 
         slopes = region['SLOPE_avg']
         if ensemble:
-            slopes = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=slopes,
-                                           scale=ERRS['slope']).rvs(size=len(slopes))
+            scale = 0.255*slopes**3.349
+            slopes = scipy.stats.truncnorm(a=-slopes/scale, b=numpy.inf, loc=slopes,
+                                           scale=scale).rvs(size=len(slopes))
 
         areas = region['area']
         if ensemble:
-            areas = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=areas,
-                                          scale=7.3822*areas**0.7).rvs(size=len(areas))
+            scale = 7.3822*areas**0.7
+            areas = scipy.stats.truncnorm(a=-areas/scale, b=numpy.inf, loc=areas,
+                                          scale=scale).rvs(size=len(areas))
 
         interp_volume_mask = region['interp_volume']
 
@@ -57,7 +80,7 @@ def run(i, ensemble=True):
 
         # Multiplying area by height instead of using volume directly since we have uncertainty
         # estimates provided in the height, not in the volume.
-        volumes.loc[~interp_volume_mask] = areas*heights
+        volumes.loc[~interp_volume_mask] = (areas*heights)[~interp_volume_mask]
 
         if ensemble:
             # For the rest of the volumes, we need to add the interpolation error
@@ -74,19 +97,20 @@ def run(i, ensemble=True):
             lengths.loc[interp_length_mask] = scipy.stats.lognorm(scale=lengths[interp_length_mask],
                                                                   s=ERRS['length_interp']).rvs(size=sum(interp_length_mask))
 
-        g_abl = region['g_abl']
-        g_acc = region['g_acc']
+        lapse_rates = region['lapse_rate']
+
+        g_acc = region['g_acc'].values
+        g_abl = region['g_abl'].values
 
         if ensemble:
-            g_abl = scipy.stats.truncnorm(a=0, b=numpy.inf, loc=g_abl,
-                                          scale=ERRS['g_abl']).rvs(size=len(g_abl))
-
-            g_acc = scipy.stats.norm(loc=g_acc, scale=ERRS['g_acc']).rvs(size=len(g_acc))
-        #g = truncated_normal(region['g'], 0.002712*numpy.ones(len(region['g'])))
+            g_acc, g_abl = sample_reject(means=numpy.vstack([g_acc, g_abl]).T,
+                                         cov=numpy.diag([ERRS['g_acc'], ERRS['g_abl']]),
+                                         a=min(glaciers['g_acc']/glaciers['g_abl']),
+                                         b=max(glaciers['g_acc']/glaciers['g_abl']))
 
         G = g_acc/g_abl - 1
 
-        run_data.loc[(region_name,), 'G'] = G.values
+        run_data.loc[(region_name,), 'G'] = G
 
         cl = volumes/(lengths**p)
         ca = volumes/(areas**gamma)
@@ -94,22 +118,24 @@ def run(i, ensemble=True):
         Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
 
         volumes_nd = volumes/Ldim**3
+
+        run_data.loc[(region_name,), 'volumes_nd'] = volumes_nd.values
+
         cl_nd = cl*Ldim**(p - 3)
         ca_nd = ca*Ldim**(2*gamma - 3)
 
-        # TODO: fix when only one is available, in which case error is 0
-        ela = region[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean(axis=1)
+        ela = region['ELA_weighted']
+
+        # prefer area-weighted, if missing use mid-range
+        ela_mask = ela.isnull()
+        ela[ela_mask] = region['ELA_mid'][ela_mask]
+        ela_conv = ELA_CONV['ela_weighted']*numpy.ones(len(ela))
+        ela_conv[ela_mask] = ELA_CONV['ela_mid']
+        ela = ela + ela_conv
         if ensemble:
-            ela = scipy.stats.norm(loc=ela,
-                                   scale=region[['ELA_mid', 'ELA_weighted',
-                                                 'ELA_median']].std(axis=1).replace(numpy.nan, 0) + 1e-8).rvs(size=len(ela))
-
-        # assert(sum(zela > heights) == 0)
-
-        # Steady
-        # zela = heights - lengths*slopes/2
-        # zela_nd = zela/Ldim
-        # P = (2*zela_nd*cl_nd**(1/q))/(slopes)
+            ela_err = ERRS['ela_weighted']*numpy.ones(len(ela))
+            ela_err[ela_mask] = ERRS['ela_mid']
+            ela = scipy.stats.norm(loc=ela, scale=ela_err).rvs(size=len(ela))
 
         zela = ela - (region['Zmax'] - heights)
         zela_nd = zela/Ldim
@@ -117,7 +143,7 @@ def run(i, ensemble=True):
 
         run_data.loc[(region_name,), 'P'] = P.values
 
-        sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
+        sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rates**(-1)
 
         run_data.loc[(region_name,), 'sensitivity'] = sensitivity.values
 
@@ -131,30 +157,15 @@ def run(i, ensemble=True):
 
         run_data.loc[(region_name,), 'tau'] = tau.values
 
-        # Also record results for G*=0, g_abl=g
-        # sensitivity_gz = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(0, P, volumes_nd)
-
-        # run_data.loc[(region_name,), 'sensitivity_gz'] = sensitivity_gz
-
-        # volumes_ss_gz = final_volume_vec(0, P, volumes_nd)
-
-        # run_data.loc[(region_name,), 'volumes_ss_gz'] = volumes_ss_gz*Ldim**3
-
-        # tau_gz = (4/5*P/volumes_ss_gz**(1/5) + 7/5*volumes_ss_gz**(2/5) - 1)**(-1)*g**(-1)
-
-        # run_data.loc[(region_name,), 'tau_gz'] = tau_gz
-    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau']]
+    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'volumes_nd']]
 
 
 def run_all():
-    pool = multiprocessing.Pool(processes=4)
+    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
     all_data = pool.map(run, range(100))
     pickle.dump(all_data, open('all_data', 'wb'))
-# all_glaciers.to_pickle('data/serialized/all_glaciers')
-        #region_volume = sum(volumes.values[((P != float('inf')) & (P < 0.1859) & (sensitivity > -5000)).nonzero()])
-        #region_volume = sum(volumes.values[((P != float('inf')) & (P < P0)).nonzero()])
 
-        #sensitivity = sensitivity[sensitivity > -5000]
 
-        #sensitivities.append(sensitivity)
-        #region_volumes.append(region_volume)
+def run_single():
+    single_data = run(0, ensemble=False)
+    pickle.dump(single_data, open('single_data', 'wb'))

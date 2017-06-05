@@ -17,7 +17,7 @@ Xf = glaciers[features]
 Xnorm = sm.add_constant((Xf - Xf.mean())/(Xf.std()))
 
 X = numpy.radians(glaciers[['lat', 'lon']])
-y = glaciers['g_acc']
+y = glaciers['g_abl']
 
 errs = []
 for train, test in sklearn.cross_validation.KFold(len(glaciers), n_folds=20):
@@ -33,13 +33,13 @@ for train, test in sklearn.cross_validation.KFold(len(glaciers), n_folds=20):
 
     res1 = neigh.predict(Xtest)
 
-    X2 = Xnorm.iloc[train, :][['const', 'max_elevation', 'cloud_cover']]
+    X2 = Xnorm.iloc[train, :][['const', 'summer_temperature', 'cloud_cover']]
     model = sm.GLM(ytrain, X2, family=sm.families.Gamma()).fit()
 
-    res2 = model.predict(Xnorm.iloc[test, :][['const', 'max_elevation', 'cloud_cover']])
+    res2 = model.predict(Xnorm.iloc[test, :][['const', 'summer_temperature', 'cloud_cover']])
 
     res = 0.5*res1 + 0.5*res2
 
-    error = ((ytest - res)**2).mean()
+    error = numpy.sqrt(((ytest - res)**2).mean())
 
     errs.append(error)

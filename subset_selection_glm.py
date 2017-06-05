@@ -3,11 +3,10 @@ import itertools
 import numpy
 import pandas
 import sklearn
-import sklearn.cross_validation
+import sklearn.model_selection
 import sklearn.neighbors
-import sklearn.linear_model
-import statsmodels.api as sm
-from glm import GammaRegressor
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
@@ -16,6 +15,7 @@ def power_set(iterable):
     # From StackOverflow
     s = list(iterable)
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
+
 
 features = ['max_elevation', 'median_elevation', 'continentality', 'summer_temperature',
             'precipitation', 'winter_precipitation', 'cloud_cover', 'lapse_rate']
@@ -28,9 +28,9 @@ glaciers.loc[glaciers['lat'] > 55, 'region'] = 'high'
 
 for i in range(100):
     print(i)
-    for gradient in ['g', 'g_abl', 'g_acc']:
+    for gradient in ['g_abl', 'g_acc']:
         # Timescale cannot be negative
-        if gradient in ['g', 'g_abl']:
+        if gradient == 'g_abl':
             data = glaciers[glaciers[gradient] > 0]
         else:
             data = glaciers[glaciers[gradient].notnull()]
@@ -42,48 +42,66 @@ for i in range(100):
         X = data[features]
         y = data[gradient]
         X_norm = (X - X.mean())/(X.std())
-        X_val, X_test, y_val, y_test = sklearn.cross_validation.train_test_split(X_norm, y,
-                                                                                 test_size=0.2)
+        X_val, X_test, y_val, y_test = sklearn.model_selection.train_test_split(X_norm, y,
+                                                                                test_size=0.05)
         coords_val = glaciers.loc[X_val.index][['lat', 'lon']]
         coords_test = glaciers.loc[X_test.index][['lat', 'lon']]
 
-        i = 0
-        for subset in power_set(features):
-            print(i)
+        for subset in list(power_set(features))[1:]:
             subset_err = []
             not_null_indices = X_val[list(subset)].notnull().all(axis=1)
-            for train_index, test_index in sklearn.cross_validation.StratifiedKFold(glaciers.loc[not_null_indices.index, 'region'][not_null_indices]):
-                # print(glaciers.loc[not_null_indices.index, 'region'][not_null_indices].iloc[train_index].value_counts())
-                model = GammaRegressor().fit(X_val[list(subset)][not_null_indices].iloc[train_index], y_val[not_null_indices].iloc[train_index])
-                error = numpy.mean((model.predict(X_val[list(subset)][not_null_indices].iloc[test_index]) - y_val[not_null_indices].iloc[test_index])**2)
+            X_val_subset = X_val[list(subset)][not_null_indices]
+            y_val_subset = y_val[not_null_indices]
+            skf = sklearn.model_selection.StratifiedKFold(n_splits=3)
+            for train_index, test_index in skf.split(X_val_subset,
+                                                     glaciers.loc[not_null_indices.index,
+                                                                  'region'][not_null_indices]):
+                model = LinearRegression().fit(X_val_subset.iloc[train_index],
+                                               y_val_subset.iloc[train_index])
+                error = numpy.mean((model.predict(X_val_subset.iloc[test_index])
+                                    - y_val_subset.iloc[test_index])**2)
                 subset_err.append(error)
-            cv_list.append((subset, numpy.mean(subset_err)))
-            i += 1
+            cv_list.append({'subset': subset, 'err': numpy.mean(subset_err)})
 
-        best_subset = cv_list[numpy.argmin([subset[1] for subset in cv_list])][0]
-        not_null_indices_test = X_test[list(best_subset)].notnull().all(axis=1)
-        not_null_indices_val = X_val[list(best_subset)].notnull().all(axis=1)
-        neighbours_val = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
-                                                               metric='haversine', algorithm='ball_tree')
-        neighbours_val.fit(numpy.radians(coords_val), y_val)
-        neighbours_test = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
-                                                                metric='haversine', algorithm='ball_tree')
-        neighbours_test.fit(numpy.radians(coords_test), y_test)
-        clf_val = GammaRegressor().fit(X_val[list(best_subset)][not_null_indices_val],
-                                       y_val[not_null_indices_val])
-        error = (0.5*clf_val.predict(X_test[list(best_subset)][not_null_indices_test])
-                 + 0.5*neighbours_val.predict(coords_test[not_null_indices_test])) - y_test[not_null_indices_test]
-        error = numpy.sqrt(numpy.mean(error**2))
+        best_subset = cv_list[numpy.argmin([subset['err'] for subset in cv_list])]['subset']
 
-        try:
-            clf_test = GammaRegressor().fit(X_test[list(best_subset)][not_null_indices_test],
-                                            y_test[not_null_indices_test])
-            r2 = sklearn.metrics.r2_score(y_test[not_null_indices_test],
-                                          0.5*clf_test.predict(X_test[list(best_subset)][not_null_indices_test])
-                                          + 0.5*neighbours_test.predict(coords_test[not_null_indices_test]))
-        except:
-            pass
-        # error = sklearn.cross_validation.cross_val_score(GammaRegressor(),
-        #                                                  X_test[list(best_subset)][not_null_indices],
-        #                                                  y_test[not_null_indices], scoring='r2')
-        runs.append((gradient, best_subset, r2, error))
+        runs.append({'gradient': gradient, 'subset': best_subset})
+
+runs = pandas.DataFrame(runs)
+
+for gradient in ['g_abl', 'g_acc']:
+    subset = runs[runs['gradient'] == gradient]['subset'].value_counts().argmax()
+
+    X = data[list(subset)]
+    y = data[gradient]
+    X_norm = (X - X.mean())/(X.std())
+
+    not_null_indices = X_norm[list(subset)].notnull().all(axis=1)
+    X_nn = X_norm[list(subset)][not_null_indices]
+    y_nn = y[not_null_indices]
+
+    model = LinearRegression().fit(X_nn, y_nn)
+    coords = glaciers.loc[X_nn.index][['lat', 'lon']]
+    neighbours = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
+                                                       metric='haversine',
+                                                       algorithm='ball_tree')
+    neighbours.fit(numpy.radians(coords), y_nn)
+    error = ((0.5*model.predict(X_nn) + 0.5*neighbours.predict(coords)) - y_nn)
+    plt.scatter(y_nn, error)
+    plt.show()
+
+    kf = sklearn.model_selection.KFold(n_splits=20)
+    subset_err = []
+    for train_index, test_index in kf.split(X_nn, y_nn):
+        model = LinearRegression().fit(X_nn.iloc[train_index], y_nn.iloc[train_index])
+        coords_train = glaciers.loc[X_nn.iloc[train_index].index][['lat', 'lon']]
+        coords_test = glaciers.loc[X_nn.iloc[test_index].index][['lat', 'lon']]
+        neighbours = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
+                                                           metric='haversine',
+                                                           algorithm='ball_tree')
+        neighbours.fit(numpy.radians(coords_train), y_nn.iloc[train_index])
+        error = ((0.5*model.predict(X_nn.iloc[test_index])
+                  + 0.5*neighbours.predict(coords_test)) - y_nn.iloc[test_index])
+        subset_err.append(numpy.sqrt(numpy.mean(error**2)))
+
+    print(gradient, numpy.mean(subset_err))

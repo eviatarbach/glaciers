@@ -3,6 +3,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 from data import eq_volume
+import plot_config
 # TODO: negative G, positive P
 
 
@@ -25,6 +26,7 @@ def c2(G, P):
         return res[2] if (len(res) >= 3) else numpy.nan
     else:
         return res[1] if (len(res) >= 2) else numpy.nan
+
 
 c0v = numpy.vectorize(c0)
 c1v = numpy.vectorize(c1)
@@ -50,10 +52,11 @@ Z2 = c2v(Gmesh, Pmesh)
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
-ax.plot_wireframe(Gmesh, Pmesh, Z2, alpha=0.5, cstride=1, rstride=1, color='black')
-ax.plot_wireframe(Gmesh, Pmesh, Z1, alpha=1, cstride=1, rstride=1, color='black',
-                  linestyle='dashdot')
-ax.plot_wireframe(Gmesh_neg, Pmesh_neg, Z0_neg, alpha=0.5, cstride=1, rstride=1, color='black')
+ax.plot_wireframe(Gmesh, Pmesh, Z2, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.8)
+ax.plot_wireframe(Gmesh, Pmesh, Z1, alpha=1, cstride=1, rstride=1, color='black', linewidth=0.7,
+                  linestyle='dotted')
+ax.plot_wireframe(Gmesh_neg, Pmesh_neg, Z0_neg, alpha=0.5, cstride=1, rstride=1, color='black',
+                  linewidth=0.8)
 plt.rc('text', usetex=True)
 ax.xaxis.set_rotate_label(False)
 ax.yaxis.set_rotate_label(False)

@@ -6,8 +6,6 @@ import geopandas
 
 from data import RGI_REGIONS, THICK_REGIONS
 
-# TODO: what to do with Alaska?
-
 
 def median_elev(hypso, elevs):
     """
@@ -37,6 +35,7 @@ def median_elev(hypso, elevs):
     # and hypso_median = 500.
     return elevs[i_lower] + (50*(500 - cumsum_lower)/(cumsum_upper - cumsum_lower))
 
+
 data = pandas.DataFrame(columns=['RGIId', 'Slope', 'Aspect'])
 
 thickness_regex = re.compile('^(\d+);' + '\s+([-.0-9]+)'*18 + ';\s+(\d+)\s+(.+)$',
@@ -52,7 +51,6 @@ for i, region in enumerate(RGI_REGIONS):
                                                                             name=region),
               'r') as hypso_file:
 
-        # No context managers in geopandas?
         region_data = geopandas.read_file('data/{num}_rgi50_{name}'.format(num=region_id,
                                                                            name=region))
         data = data.append(region_data[['RGIId', 'Slope', 'Aspect']])
@@ -93,9 +91,6 @@ for i, region in enumerate(RGI_REGIONS):
         hypso_data['RGIId   '] = hypso_data['RGIId   '].str[-5:]
         hypso_data = hypso_data.set_index('RGIId   ')
 
-        # region_data = region_data[~(hypso_data.values[:, 2:] == -9).any(axis=1)]
-        # hypso_data = hypso_data[~(hypso_data.values[:, 2:] == -9).any(axis=1)]
-
         altitudes = numpy.float64(hypso_data.columns[2:])
 
         # area-weighted mean altitude
@@ -103,14 +98,15 @@ for i, region in enumerate(RGI_REGIONS):
                                        /1000).sum(axis=1)
 
         region_data['second_moment'] = (altitudes**2*hypso_data[hypso_data.columns[2:]]
-                                       /1000).sum(axis=1)
+                                        /1000).sum(axis=1)
 
         region_data['hypso_cells'] = (hypso_data[hypso_data.columns[2:]] != 0).sum(axis=1)
 
         # median altitude
         region_data['ELA_median'] = median_elev(hypso_data[hypso_data.columns[2:]], altitudes)
 
-        # region_data['ELA'] = altitudes[numpy.argmax(hypso_data.values[:, 2:], axis=1)]
+        # mid-range altitude
+        region_data['ELA_mid'] = (region_data['Zmax'] + region_data['Zmin'])/2
 
         # replace invalid values with NaN
         region_data['volume'] = region_data['volume'].replace(0, numpy.nan)
@@ -120,6 +116,7 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['Slope'] = region_data['Slope'].replace(0, numpy.nan)
         region_data['Slope'] = region_data['Slope'].replace(-9, numpy.nan)
         region_data['Lmax'] = region_data['Lmax'].replace(-9, numpy.nan)
+        region_data['ELA_median'] = region_data['ELA_median'].replace(-numpy.inf, numpy.nan)
 
         # unit conversion
 
@@ -133,6 +130,10 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['volume'] *= 1000**3
         region_data['LENGTH'] *= 1000
 
+        print(region)
+        print('Total number in RGI:', len(region_data))
+        print('Total area in RGI (km^2):', region_data['Area'].sum()/1000**2)
+
         # restrict to glacier type
         region_data = region_data[(region_data['GlacType'].str[0] == '0')
                                   & (region_data['GlacType'].str[1] == '0')
@@ -141,13 +142,19 @@ for i, region in enumerate(RGI_REGIONS):
         # remove tidewater glaciers, ones that have minimum altitude of 0
         region_data = region_data[region_data['Zmin'] > 0]
 
+        # drop glaciers that have no slope information
+        region_data = region_data[~region_data['SLOPE_avg'].isnull()
+                                  | ~region_data['Slope'].isnull()]
+
+        print('Total number included:', len(region_data))
+        print('Total area included (km^2):', region_data['Area'].sum()/1000**2)
+
         region_data = region_data.reset_index()
         region_data = region_data.set_index(['Region', 'RGIId'])
 
         all_regions.append(region_data)
 
-all_glaciers = pandas.concat(all_regions)  # .dropna()
-# all_glaciers = all_glaciers.drop('LowLatitudes')
+all_glaciers = pandas.concat(all_regions)
 
 with open('data/GlaThiDa_2014/T.csv', 'r', encoding='ISO-8859-1') as glathida_file,\
      open('data/Manual_links_GlaThiDa_to_RGI_WORLD_20160412.csv', 'r',

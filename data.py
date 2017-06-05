@@ -30,6 +30,7 @@ def closest_index_in_range(lower, upper, step, value):
 
     return index
 
+
 RGI_REGIONS = ['Alaska', 'WesternCanadaUS', 'ArcticCanadaNorth', 'ArcticCanadaSouth',
                'GreenlandPeriphery', 'Iceland', 'Svalbard', 'Scandinavia', 'RussianArctic',
                'NorthAsia', 'CentralEurope', 'CaucasusMiddleEast', 'CentralAsia', 'SouthAsiaWest',
@@ -96,9 +97,10 @@ def stability(G, P, V):
         return numpy.sign(equation_diff.evaluate(terms, V))
 
 
-def diff(G, P, V, dP=1e-5):
+def diff(G, P, V, dP=1e-8):
     return numpy.gradient([final_volume(G, P - dP, V), final_volume(G, P, V),
                            final_volume(G, P + dP, V)], dP)[1]
+
 
 final_volume_vec = numpy.vectorize(final_volume)
 diff_vec = numpy.vectorize(diff)
