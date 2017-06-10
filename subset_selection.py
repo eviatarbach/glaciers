@@ -72,6 +72,11 @@ runs = pandas.DataFrame(runs)
 for gradient in ['g_abl', 'g_acc']:
     subset = runs[runs['gradient'] == gradient]['subset'].value_counts().argmax()
 
+    if gradient == 'g_abl':
+        data = glaciers[glaciers[gradient] > 0]
+    else:
+        data = glaciers[glaciers[gradient].notnull()]
+
     X = data[list(subset)]
     y = data[gradient]
     X_norm = (X - X.mean())/(X.std())
@@ -86,8 +91,8 @@ for gradient in ['g_abl', 'g_acc']:
                                                        metric='haversine',
                                                        algorithm='ball_tree')
     neighbours.fit(numpy.radians(coords), y_nn)
-    error = ((0.5*model.predict(X_nn) + 0.5*neighbours.predict(coords)) - y_nn)
-    plt.scatter(y_nn, error)
+    error = (y_nn - (0.5*model.predict(X_nn) + 0.5*neighbours.predict(coords)))
+    plt.hist(error, bins=15)
     plt.show()
 
     kf = sklearn.model_selection.KFold(n_splits=20)

@@ -7,16 +7,19 @@ import scipy.stats
 
 from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec
 
+ABL_ERROR = (0.55856689818092564, -0.010579639019137327, 0.0079391616578490809)
+
 
 def sample_reject(means, cov, a, b):
     samples = numpy.zeros([len(means), 2])
     for i, mean in enumerate(means):
-        dist = scipy.stats.multivariate_normal(mean=mean, cov=cov)
-        sample = dist.rvs(size=10)
+        dist_acc = scipy.stats.norm(loc=mean[0], scale=cov[0][0])
+        dist_abl = scipy.stats.norm(loc=mean[1], scale=cov[1][1])  # scipy.stats.lognorm(*ABL_ERROR)
+        sample = numpy.vstack([dist_acc.rvs(size=10), dist_abl.rvs(size=10)]).T
         mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
                 & (sample[:, 0]/sample[:, 1] > a))
         while sum(mask) == 0:
-            sample = dist.rvs(size=10)
+            sample = numpy.vstack([dist_acc.rvs(size=10), dist_abl.rvs(size=10)]).T
             mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
                     & (sample[:, 0]/sample[:, 1] > a))
         samples[i, :] = sample[numpy.where(mask)[0][0]]
@@ -111,6 +114,8 @@ def run(i, ensemble=True):
         G = g_acc/g_abl - 1
 
         run_data.loc[(region_name,), 'G'] = G
+        run_data.loc[(region_name,), 'g_abl'] = g_abl
+        run_data.loc[(region_name,), 'g_acc'] = g_acc
 
         cl = volumes/(lengths**p)
         ca = volumes/(areas**gamma)
@@ -157,12 +162,12 @@ def run(i, ensemble=True):
 
         run_data.loc[(region_name,), 'tau'] = tau.values
 
-    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'volumes_nd']]
+    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'volumes_nd', 'g_acc', 'g_abl']]
 
 
-def run_all():
+def run_all(n_samples=100):
     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    all_data = pool.map(run, range(100))
+    all_data = pool.map(run, range(n_samples))
     pickle.dump(all_data, open('all_data', 'wb'))
 
 

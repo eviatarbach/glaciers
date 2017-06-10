@@ -1,53 +1,59 @@
+import pickle
+
 import numpy
 import pandas
+
+import plot_config
+
 import matplotlib.pyplot as plt
 
-RGI_NAMES = sorted(['Alaska', 'Western Canada & USA', 'Arctic Canada (North)',
-                    'Arctic Canada (South)', 'Greenland (periphery)', 'Iceland',
-                    'Svalbard & Jan Mayen', 'Scandinavia', 'Russian Arctic', 'North Asia',
-                    'Central Europe', 'Caucasus & Middle East', 'Central Asia',
-                    'South Asia (West)', 'South Asia (East)', 'Low Latitudes', 'Southern Andes',
-                    'New Zealand'])
+from data import RGI_NAMES, RGI_REGIONS
 
-all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
+RGI_REGIONS = RGI_REGIONS[::-1]
+RGI_NAMES = RGI_NAMES[::-1]
 
-sens = all_glaciers[['tau_weighted', 'tau_gz_weighted', 'tau_median',
-                     'tau_gz_median', 'tau_mid', 'tau_gz_mid']]
+all_data = pickle.load(open('all_data', 'rb'))
+single_data = pickle.load(open('single_data', 'rb'))
 
-means = sens.groupby(level='Region').mean()
+tau = [d['tau'] for d in all_data]
+rel = [t.groupby(level='Region').mean() for t in tau]
+concat = pandas.concat(rel, axis=1)
+# means = concat.mean(axis=1)
+stds = concat.std(axis=1)
 
-sens_means = (means['tau_weighted'] + means['tau_median']
-              + means['tau_mid'])/3
+means_single = single_data.groupby(level='Region')['tau'].mean()
 
-order = numpy.argsort(sens_means.values)
+indices = numpy.arange(19)
 
-indices = numpy.arange(18)
+ax = plt.subplot(111)
 
-plt.plot(means['tau_weighted'][order], indices[range(18)] - 0.2, 'o',
-         markerfacecolor='black', markersize=8)
-plt.plot(means['tau_median'][order], indices[range(18)], 'o', markerfacecolor='white',
-         markeredgewidth=3)
-plt.plot(means['tau_mid'][order], indices[range(18)] + 0.2, 'o', markerfacecolor='white',
-         markeredgewidth=2, markersize=7)
+# plt.plot(means[RGI_REGIONS], range(19), 'o', markerfacecolor='black', markeredgecolor='black',
+#          markersize=8)
+plt.plot(means_single[RGI_REGIONS], range(19), 'o', markerfacecolor='black',
+         markeredgecolor='black', markersize=8)
 
-plt.hlines(indices, [0], 300, linestyles='dotted')
+plt.hlines(indices, 0, 225, linestyles='dotted', linewidth=1.5)
+plt.hlines(indices, (means_single - stds)[RGI_REGIONS], (means_single + stds)[RGI_REGIONS],
+           linewidth=2.5)
 
-plt.yticks(range(18), numpy.array(RGI_NAMES)[order], horizontalalignment='left', fontsize=14)
-plt.xticks(fontsize=12)
+plt.yticks(range(19), RGI_NAMES, fontsize=20, horizontalalignment='left')
+plt.xticks(fontsize=18)
 
-plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = ['Optima']
+yax = ax.get_yaxis()
+yax.set_tick_params(pad=245)
 
-ax = plt.gca()
-ax.tick_params(axis='y', direction='out', pad=155, length=0)
-ax.tick_params(axis='x', direction='out')
+# plt.rcParams['font.family'] = 'sans-serif'
+# plt.rcParams['font.sans-serif'] = ['Optima']
+# plt.rc('text', usetex=True)
+# plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 
-ax.set_xlim([0, 250])
-ax.set_ylim([-1, 18])
+ax.set_xlim([0, 225])
+ax.set_ylim([-1, 19])
 
-plt.xlabel('Mean $e$-folding time (years)', fontsize=16)
+plt.xlabel('Mean $e$-folding time (years)', fontsize=22)
 
-plt.legend(['Area-weighted', 'Median', 'Mid-range'], numpoints=1, loc='lower center', ncol=3,
-           bbox_to_anchor=(0.5, 1), frameon=False, fontsize=14)
+fig = plt.gcf()
+fig.set_size_inches(12, 7)
+plt.tight_layout()
 
-plt.show()
+plt.savefig('figures/tau.pdf')

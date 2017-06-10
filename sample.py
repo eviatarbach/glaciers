@@ -1,10 +1,7 @@
 import pandas
 import numpy
-from statsmodels.nonparametric.kernel_density import KDEMultivariateConditional
 
 from data import p, gamma, diff_vec, final_volume_vec
-
-SUBSET_SIZE = 10000
 
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
@@ -32,16 +29,18 @@ dat_tau = dat_tau[~numpy.isnan(dat_tau).any(axis=1)]
 tau_means = dat_tau.mean(axis=0)
 tau_stds = dat_tau.std(axis=0)
 
+dat_all = numpy.vstack([G, all_glaciers['g_acc'], all_glaciers['g_abl'], zela, numpy.log(ca),
+                        numpy.log(cl), all_glaciers['SLOPE_avg'],
+                        numpy.log(all_glaciers['volume']), all_glaciers['lapse_rate']]).T
+dat_all = dat_all[~numpy.isnan(dat_all).any(axis=1)]
+
+all_means = dat_all.mean(axis=0)
+all_stds = dat_all.std(axis=0)
+
 # Normalize
 dat_sens = (dat_sens - sens_means)/sens_stds
 dat_tau = (dat_tau - tau_means)/tau_stds
-
-# Pick smaller subset, to reduce cost of evaluating the PDF of the kernel density estimation
-numpy.random.shuffle(dat_sens)
-dat_sens_subset = dat_sens[:SUBSET_SIZE, :]
-
-numpy.random.shuffle(dat_tau)
-dat_tau_subset = dat_tau[:SUBSET_SIZE, :]
+dat_all = (dat_all - all_means)/all_stds
 
 
 def sens_glacier(param_vals):
@@ -89,59 +88,16 @@ def tau_glacier(param_vals):
     return tau.tolist()
 
 
-def sample_joint_sens(n, subset=range(1, dat_sens.shape[1] + 1)):
-    if isinstance(subset, int):
-        subset = [subset]
-    subset = [i - 1 for i in subset]
-    samples = dat_sens[numpy.random.choice(dat_sens.shape[0], n), :][:, subset].tolist()
+def sample_joint_sens(n):
+    samples = dat_sens[numpy.random.choice(dat_sens.shape[0], n), :].tolist()
     return samples
 
 
-def conditional_PDF_sens(Sj, Sjc, xjc):
-    if isinstance(Sj, int):
-        Sj = [Sj]
-    if isinstance(Sjc, int):
-        Sjc = [Sjc]
-    if not isinstance(xjc, list):
-        xjc = [xjc]
-    Sj = [i - 1 for i in Sj]
-    Sjc = [i - 1 for i in Sjc]
-    cond = KDEMultivariateConditional(endog=dat_sens_subset[:, Sj], exog=dat_sens_subset[:, Sjc],
-                                      bw='normal_reference', dep_type='c'*len(Sj),
-                                      indep_type='c'*len(Sjc))
-
-    def conditional(yj):
-        if not isinstance(yj, list):
-            yj = [yj]
-        return cond.pdf(endog_predict=yj, exog_predict=xjc).tolist()
-
-    return conditional
-
-
-def sample_joint_tau(n, subset=range(1, dat_tau.shape[1] + 1)):
-    if isinstance(subset, int):
-        subset = [subset]
-    subset = [i - 1 for i in subset]
-    samples = dat_tau[numpy.random.choice(dat_tau.shape[0], n), :][:, subset].tolist()
+def sample_joint_tau(n):
+    samples = dat_tau[numpy.random.choice(dat_tau.shape[0], n), :].tolist()
     return samples
 
 
-def conditional_PDF_tau(Sj, Sjc, xjc):
-    if isinstance(Sj, int):
-        Sj = [Sj]
-    if isinstance(Sjc, int):
-        Sjc = [Sjc]
-    if not isinstance(xjc, list):
-        xjc = [xjc]
-    Sj = [i - 1 for i in Sj]
-    Sjc = [i - 1 for i in Sjc]
-    cond = KDEMultivariateConditional(endog=dat_tau_subset[:, Sj], exog=dat_tau_subset[:, Sjc],
-                                      bw='normal_reference', dep_type='c'*len(Sj),
-                                      indep_type='c'*len(Sjc))
-
-    def conditional(yj):
-        if not isinstance(yj, list):
-            yj = [yj]
-        return cond.pdf(endog_predict=yj, exog_predict=xjc).tolist()
-
-    return conditional
+def sample_joint_all(n):
+    samples = dat_all[numpy.random.choice(dat_all.shape[0], n), :].tolist()
+    return samples

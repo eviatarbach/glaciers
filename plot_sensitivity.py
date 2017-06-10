@@ -1,56 +1,62 @@
+import pickle
+
 import numpy
 import pandas
+
+import plot_config
+
 import matplotlib.pyplot as plt
 
-RGI_NAMES = sorted(['Alaska', 'Western Canada & USA', 'Arctic Canada (North)',
-                    'Arctic Canada (South)', 'Greenland (periphery)', 'Iceland',
-                    'Svalbard & Jan Mayen', 'Scandinavia', 'Russian Arctic', 'North Asia',
-                    'Central Europe', 'Caucasus & Middle East', 'Central Asia',
-                    'South Asia (West)', 'South Asia (East)', 'Low Latitudes', 'Southern Andes',
-                    'New Zealand'])
+from data import RGI_NAMES, RGI_REGIONS
 
-all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
+RGI_REGIONS = RGI_REGIONS[::-1]
+RGI_NAMES = RGI_NAMES[::-1]
 
-sens = -(all_glaciers[['sensitivity_weighted', 'sensitivity_gz_weighted', 'sensitivity_median',
-                       'sensitivity_gz_median', 'sensitivity_mid', 'sensitivity_gz_mid']]
-         .divide(all_glaciers['volume'], axis=0))
+all_data = pickle.load(open('all_data', 'rb'))
+single_data = pickle.load(open('single_data', 'rb'))
 
-sens = sens.replace(0, numpy.nan)
+vols = [d['volumes_ss'] for d in all_data]
+sens = [d['sensitivity'] for d in all_data]
+rel = [s.groupby(level='Region').sum()/vols[i].groupby(level='Region').sum() for i, s in
+       enumerate(sens)]
+concat = pandas.concat(rel, axis=1)
+# means = -concat.mean(axis=1)
+stds = concat.std(axis=1)
 
-means = sens.groupby(level='Region').mean()
+means_single = (-single_data.groupby(level='Region')['sensitivity'].sum()
+                /single_data.groupby(level='Region')['volumes_ss'].sum())
 
-sens_means = (means['sensitivity_weighted'] + means['sensitivity_median']
-              + means['sensitivity_mid'])/3
+indices = numpy.arange(19)
 
-order = numpy.argsort(sens_means.values)
+ax = plt.subplot(111)
 
-indices = numpy.arange(18)
+# plt.plot(means[RGI_REGIONS], range(19), 'o', markerfacecolor='black', markeredgecolor='black',
+#          markersize=8)
+plt.plot(means_single[RGI_REGIONS], range(19), 'o', markerfacecolor='black',
+         markeredgecolor='black', markersize=8)
 
-plt.plot(means['sensitivity_weighted'][order], indices[range(18)] - 0.2, 'o',
-         markerfacecolor='black', markersize=8)
-plt.plot(means['sensitivity_median'][order], indices[range(18)], 'o', markerfacecolor='white',
-         markeredgewidth=3)
-plt.plot(means['sensitivity_mid'][order], indices[range(18)] + 0.2, 'o', markerfacecolor='white',
-         markeredgewidth=2, markersize=7)
+plt.hlines(indices, 0, 1.6, linestyles='dotted', linewidth=1.5)
+plt.hlines(indices, (means_single - stds)[RGI_REGIONS], (means_single + stds)[RGI_REGIONS],
+           linewidth=2.5)
 
-plt.hlines(indices, [0], 0.02, linestyles='dotted')
+plt.yticks(range(19), RGI_NAMES, fontsize=20, horizontalalignment='left')
+plt.xticks(fontsize=18)
 
-plt.yticks(range(18), numpy.array(RGI_NAMES)[order], horizontalalignment='left', fontsize=14)
-plt.xticks(fontsize=12)
+yax = ax.get_yaxis()
+yax.set_tick_params(pad=245)
 
-plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = ['Optima']
+# plt.rcParams['font.family'] = 'sans-serif'
+# plt.rcParams['font.sans-serif'] = ['Optima']
+# plt.rc('text', usetex=True)
+# plt.rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
 
-ax = plt.gca()
-ax.tick_params(axis='y', direction='out', pad=155, length=0)
-ax.tick_params(axis='x', direction='out')
+ax.set_xlim([0, 1.6])
+ax.set_ylim([-1, 19])
 
-ax.set_xlim([0, 0.02])
-ax.set_ylim([-1, 18])
+plt.xlabel('Normalized sensitivity to temperature (K$^{-1}$)', fontsize=22)
 
-plt.xlabel('Mean normalized sensitivity to ELA perturbations (m$^{-1}$)', fontsize=16)
+fig = plt.gcf()
+fig.set_size_inches(12, 7)
+plt.tight_layout()
 
-plt.legend(['Area-weighted', 'Median', 'Mid-range'], numpoints=1, loc='lower center', ncol=3,
-           bbox_to_anchor=(0.5, 1), frameon=False, fontsize=14)
-
-plt.show()
+plt.savefig('figures/sens.pdf')
