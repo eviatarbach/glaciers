@@ -1,22 +1,21 @@
 import pandas
 import numpy
 from scipy.integrate import dblquad
-import scipy.stats
 
 import plot_config
 
 import matplotlib.pyplot as plt
 
-ERRS = {'g_abl': 0.005657,  # root-mean square error in interpolating g_abl
-        'g_acc': 0.002203}  # root-mean square error in interpolating g_acc
+ERRS = {'g_abl': 0.004487,  # root-mean square error in interpolating g_abl
+        'g_acc': 0.001889}  # root-mean square error in interpolating g_acc
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
-g_abl_pts = numpy.linspace(min(glaciers['g_abl']), max(glaciers['g_abl']), 25)
-g_acc_pts = numpy.linspace(min(glaciers['g_acc']), max(glaciers['g_acc']), 25)
+g_abl_pts = numpy.linspace(glaciers['g_abl'].min(), glaciers['g_abl'].max(), 25)
+g_acc_pts = numpy.linspace(glaciers['g_acc'].min(), glaciers['g_acc'].max(), 25)
 
-a = min(glaciers['g_acc']/glaciers['g_abl'])
-b = max(glaciers['g_acc']/glaciers['g_abl'])
+a = (glaciers['g_acc']/glaciers['g_abl']).min()
+b = (glaciers['g_acc']/glaciers['g_abl']).max()
 
 mu_x = numpy.mean(glaciers['g_acc'])
 mu_y = numpy.mean(glaciers['g_abl'])

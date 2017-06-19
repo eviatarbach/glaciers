@@ -4,7 +4,7 @@ from scipy.stats import linregress
 
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import TheilSenRegressor
+from sklearn.linear_model import LinearRegression
 
 YEAR_START, YEAR_END = 1960, 2014
 NUM_YEARS = YEAR_END - YEAR_START + 1
@@ -78,14 +78,14 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
         years = years[(YEAR_START <= years) & (years <= YEAR_END)]
         for year in years:
             # Gradient using slope of linear regression
-            altitudes = data_mb.loc[glacier, year]['ALTITUDE'].values.reshape(-1, 1)  # m
+            altitudes = data_mb.loc[glacier, year]['ALTITUDE'].values  # m
             balance = data_mb.loc[glacier, year]['ANNUAL_BALANCE'].values  # mm w.e.
 
             # g = linregress(altitudes.T, balance).slope
             # gradients.append(g)
 
             ela = data_mb.loc[glacier, year]['ela'].iloc[0]
-            ela_i = altitudes.T[0].searchsorted(ela)
+            ela_i = altitudes.searchsorted(ela)
 
             glaciers_ela.loc[(glacier, year), 'ela'] = ela
 
@@ -97,20 +97,26 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
                     # Skip these years.
                     continue
 
-                abl_line = TheilSenRegressor().fit(altitudes[:ela_i], balance[:ela_i])#linregress(altitudes[:ela_i], balance[:ela_i])
-                acc_line = TheilSenRegressor().fit(altitudes[ela_i:], balance[ela_i:])#linregress(altitudes[ela_i:], balance[ela_i:])
+                altitudes = numpy.insert(altitudes, ela_i, ela).reshape(-1, 1)
+                balance = numpy.insert(balance, ela_i, 0).reshape(-1, 1)
+
+                abl_line = LinearRegression(fit_intercept=False).fit(altitudes[:ela_i + 1] - ela, balance[:ela_i + 1])#linregress(altitudes[:ela_i], balance[:ela_i])
+                acc_line = LinearRegression(fit_intercept=False).fit(altitudes[ela_i:] - ela, balance[ela_i:])#linregress(altitudes[ela_i:], balance[ela_i:])
 
                 g_abl = abl_line.coef_  # mm w.e./m
                 g_acc = acc_line.coef_  # mm w.e./m
 
+                # print(g_acc, g_abl)
                 # plt.scatter(altitudes, balance)
-                # plt.plot(altitudes[:ela_i], abl_line.predict(altitudes[:ela_i]))
-                # plt.plot(altitudes[ela_i:], acc_line.predict(altitudes[ela_i:]))
+                # plt.plot(altitudes[:ela_i + 1], abl_line.predict(altitudes[:ela_i + 1] - ela))
+                # plt.plot(altitudes[ela_i:], acc_line.predict(altitudes[ela_i:] - ela))
+
                 b_range = max(balance) - min(balance)
-                nrmse_abl = numpy.sqrt(numpy.mean((abl_line.predict(altitudes[:ela_i])
+                nrmse_abl = numpy.sqrt(numpy.mean((abl_line.predict(altitudes[:ela_i] - ela)
                                                    - balance[:ela_i])**2))/b_range
-                nrmse_acc = numpy.sqrt(numpy.mean((acc_line.predict(altitudes[ela_i:])
+                nrmse_acc = numpy.sqrt(numpy.mean((acc_line.predict(altitudes[ela_i:] - ela)
                                                    - balance[ela_i:])**2))/b_range
+                # print(nrmse_abl, nrmse_acc)
                 # plt.show()
 
                 if (abs(nrmse_abl) < 0.08) and (abs(nrmse_acc) < 0.08):

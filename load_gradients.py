@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 # Features to use in the accumulation and ablation gradient linear,
 # as determined by subset selection
 ABL_FEATURES = ['continentality', 'summer_temperature', 'lapse_rate']
-ACC_FEATURES = ['max_elevation', 'cloud_cover']
+ACC_FEATURES = ['max_elevation', 'median_elevation', 'continentality']
 # G_FEATURES = ['max_elevation', 'median_elevation', 'continentality']
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')

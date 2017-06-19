@@ -7,8 +7,6 @@ import scipy.stats
 
 from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec
 
-ABL_ERROR = (0.55856689818092564, -0.010579639019137327, 0.0079391616578490809)
-
 
 def sample_reject(means, cov, a, b):
     samples = numpy.zeros([len(means), 2])
@@ -46,8 +44,8 @@ ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 
         'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
         'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
         'length_interp': 0.249,  # root-mean square relative error in interpolating length
-        'g_abl': 0.005657,  # root-mean square error in interpolating g_abl
-        'g_acc': 0.002203,  # root-mean square error in interpolating g_acc
+        'g_abl': 0.004487,  # root-mean square error in interpolating g_abl
+        'g_acc': 0.001889,  # root-mean square error in interpolating g_acc
         'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
         'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
 
@@ -108,8 +106,8 @@ def run(i, ensemble=True):
         if ensemble:
             g_acc, g_abl = sample_reject(means=numpy.vstack([g_acc, g_abl]).T,
                                          cov=numpy.diag([ERRS['g_acc'], ERRS['g_abl']]),
-                                         a=min(glaciers['g_acc']/glaciers['g_abl']),
-                                         b=max(glaciers['g_acc']/glaciers['g_abl']))
+                                         a=(glaciers['g_acc']/glaciers['g_abl']).min(),
+                                         b=(glaciers['g_acc']/glaciers['g_abl']).max())
 
         G = g_acc/g_abl - 1
 
