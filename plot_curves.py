@@ -28,7 +28,7 @@ for i, curve in enumerate(V):
 legend = plt.legend(title='$P^*$', fontsize=18, bbox_to_anchor=(1.35, 1.0))
 plt.setp(legend.get_title(), fontsize=18)
 plt.xlabel('$t^*$', fontsize=22)
-plt.ylabel('$V^*$', fontsize=22, rotation=0)
+plt.ylabel('$V^*$', fontsize=22, rotation=0, labelpad=25)
 ax = plt.gca()
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)

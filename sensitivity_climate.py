@@ -166,9 +166,9 @@ def run(i, ensemble=True):
 def run_all(n_samples=100):
     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
     all_data = pool.map(run, range(n_samples))
-    pickle.dump(all_data, open('all_data', 'wb'))
+    pickle.dump(all_data, open('data/serialized/all_data', 'wb'))
 
 
 def run_single():
     single_data = run(0, ensemble=False)
-    pickle.dump(single_data, open('single_data', 'wb'))
+    pandas.to_pickle('data/serialized/single_data')

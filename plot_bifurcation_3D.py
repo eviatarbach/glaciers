@@ -1,11 +1,13 @@
 import numpy
+
+import plot_config
+
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 from data import eq_volume
-import plot_config
-# TODO: negative G, positive P
 
+# TODO: negative G, positive P
 
 def c0(G, P):
     res = eq_volume(G, P)
@@ -61,18 +63,18 @@ plt.rc('text', usetex=True)
 ax.xaxis.set_rotate_label(False)
 ax.yaxis.set_rotate_label(False)
 ax.zaxis.set_rotate_label(False)
-ax.set_xlabel('$G^*$', fontsize=22)
-ax.set_ylabel('$P^*$', fontsize=22)
-ax.set_zlabel('$V_s^*$', fontsize=22)
-plt.xticks(fontsize=18)
-plt.yticks(fontsize=18)
+ax.set_xlabel('$G^*$', fontsize=18)
+ax.set_ylabel('$P^*$', fontsize=18)
+ax.set_zlabel('$V_s^*$', fontsize=18)
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
 for t in ax.xaxis.get_major_ticks():
     t.set_pad(-2.5)
 for t in ax.yaxis.get_major_ticks():
     t.set_pad(-5)
 for t in ax.zaxis.get_major_ticks():
-    t.label.set_fontsize(18)
+    t.label.set_fontsize(14)
     t.set_pad(2)
 yticks = ax.yaxis.get_major_ticks()
 yticks[0].label1.set_visible(False)
-plt.show()
+plt.savefig('figures/bifurcation_3D.pdf')

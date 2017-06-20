@@ -11,10 +11,10 @@ import plot_config
 
 import matplotlib.pyplot as plt
 
-LABEL_SIZE = 22
-TICK_SIZE = 18
+LABEL_SIZE = 16
+TICK_SIZE = 12
 
-single_data = pickle.load(open('single_data', 'rb'))
+single_data = pandas.read_pickle('data/serialized/single_data')
 sens = single_data['sensitivity']
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 slopes = all_glaciers.loc[sens.index]['Slope']

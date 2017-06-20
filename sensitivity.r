@@ -34,34 +34,20 @@ python.assign("wd", getwd())
 python.exec("import sys; sys.path.append(wd)")
 python.exec("import sample")
 
-ranking_sens <- function(n_samples=500, n_trials=100){
-  ind <- matrix(0, nrow=n_trials, ncol=7)
-  for(i in 1:n_trials){
-    X <- sample_sens(n_samples)
-    Y <- sens_glacier(X)
-    m <- Y != 0
-    res <- sensiHSIC(X=X[m,])
-    ind[i,] <- tell(res, y=log(-Y[m]))$S$original
-  }
-  freqs <- table(apply(ind, 1, function(x) paste(order(x), collapse="")))
-  corr_mat <- cor(t(ind), method="kendall")
-  corr <- mean(corr_mat[lower.tri(corr_mat, diag=FALSE)])
-  return(list("freqs" = freqs, "corr" = corr))
+HSIC_sens <- function(n_samples=500){
+  X <- sample_sens(n_samples)
+  Y <- sens_glacier(X)
+  m <- Y != 0
+  res <- sensiHSIC(X=X[m,])
+  return(tell(res, y=log(-Y[m])))
 }
 
-ranking_tau <- function(n_samples=500, n_trials=100){
-  ind <- matrix(0, nrow=n_trials, ncol=7)
-  for(i in 1:n_trials){
-    X <- sample_tau(n_samples)
-    Y <- tau_glacier(X)
-    m <- Y != 0
-    res <- sensiHSIC(X=X[m,])
-    ind[i,] <- tell(res, y=log(Y[m]))$S$original
-  }
-  freqs <- table(apply(ind, 1, function(x) paste(order(x), collapse="")))
-  corr_mat <- cor(t(ind), method="kendall")
-  corr <- mean(corr_mat[lower.tri(corr_mat, diag=FALSE)])
-  return(list("freqs" = freqs, "corr" = corr))
+HSIC_tau <- function(n_samples=500){
+  X <- sample_tau(n_samples)
+  Y <- tau_glacier(X)
+  m <- Y != 0
+  res <- sensiHSIC(X=X[m,])
+  return(tell(res, y=log(Y[m])))
 }
 
 pairwise_HSIC <- function(n_samples=500){
@@ -74,3 +60,6 @@ pairwise_HSIC <- function(n_samples=500){
   }
   return(HSIC_mat)
 }
+
+write.table(HSIC_sens()$S, "data/HSIC_sens.txt", sep=",")
+write.table(HSIC_tau()$S, "data/HSIC_tau.txt", sep=",")
