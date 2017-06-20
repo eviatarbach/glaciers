@@ -1,6 +1,7 @@
 library("sensitivity")
 
-dyn.load("/home/eviatar/anaconda3/pkgs/python-3.6.1-0/lib/libpython3.6m.so.1.0")
+dyn.load(paste(system("conda info --root", intern=TRUE),
+               "/pkgs/python-3.6.1-0/lib/libpython3.6m.so.1.0", sep=""))
 library("rPython")
 
 sens_glacier <- function(param_vals){
@@ -29,7 +30,8 @@ sample_all <- function(n){
   return(do.call(rbind, python.get("res")))
 }
 
-python.exec("import sys; sys.path.append('/home/eviatar/code/glaciers')")
+python.assign("wd", getwd())
+python.exec("import sys; sys.path.append(wd)")
 python.exec("import sample")
 
 ranking_sens <- function(n_samples=500, n_trials=100){
@@ -39,7 +41,7 @@ ranking_sens <- function(n_samples=500, n_trials=100){
     Y <- sens_glacier(X)
     m <- Y != 0
     res <- sensiHSIC(X=X[m,])
-    ind[i,] <- tell(res, y=Y[m])$S$original
+    ind[i,] <- tell(res, y=log(-Y[m]))$S$original
   }
   freqs <- table(apply(ind, 1, function(x) paste(order(x), collapse="")))
   corr_mat <- cor(t(ind), method="kendall")
@@ -54,7 +56,7 @@ ranking_tau <- function(n_samples=500, n_trials=100){
     Y <- tau_glacier(X)
     m <- Y != 0
     res <- sensiHSIC(X=X[m,])
-    ind[i,] <- tell(res, y=Y[m])$S$original
+    ind[i,] <- tell(res, y=log(Y[m]))$S$original
   }
   freqs <- table(apply(ind, 1, function(x) paste(order(x), collapse="")))
   corr_mat <- cor(t(ind), method="kendall")
@@ -62,7 +64,7 @@ ranking_tau <- function(n_samples=500, n_trials=100){
   return(list("freqs" = freqs, "corr" = corr))
 }
 
-pairwise_HSIC <- function(n_samples=1000){
+pairwise_HSIC <- function(n_samples=500){
   X <- sample_all(n_samples)
   pairs <- combn(1:9, 2)
   HSIC_mat <- matrix(0, nrow=9, ncol=9)

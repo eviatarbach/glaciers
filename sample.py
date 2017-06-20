@@ -60,6 +60,7 @@ def sens_glacier(param_vals):
     volumes_nd = volumes/Ldim**3
     P = zela_nd/(ca_nd**(1/gamma))
     sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rate**(-1)
+    sensitivity[sensitivity > 0] = 0
     return sensitivity.tolist()
 
 
