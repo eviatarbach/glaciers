@@ -5,7 +5,7 @@ import pandas
 import numpy
 import scipy.stats
 
-from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec
+from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec, ELA_CONV, ERRS
 
 
 def sample_reject(means, cov, a, b):
@@ -34,20 +34,6 @@ glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 region_volumes = []
 
 all_glaciers = all_glaciers.sort_index(level=[0, 1])
-
-# The amount to adjust the median, area-weighted mean, or mid-range altitude to estimate the
-# balanced-budget ELA
-ELA_CONV = {'ela_mid': -27,  # Braithwaite & Raper, 2009
-            'ela_weighted': -36}  # Braithwaite, 2015
-
-ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 2012)
-        'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
-        'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
-        'length_interp': 0.249,  # root-mean square relative error in interpolating length
-        'g_abl': 0.004487,  # root-mean square error in interpolating g_abl
-        'g_acc': 0.001889,  # root-mean square error in interpolating g_acc
-        'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
-        'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
 
 
 def run(i, ensemble=True):
@@ -171,4 +157,4 @@ def run_all(n_samples=100):
 
 def run_single():
     single_data = run(0, ensemble=False)
-    pandas.to_pickle('data/serialized/single_data')
+    pandas.to_pickle(single_data, 'data/serialized/single_data')

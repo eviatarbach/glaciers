@@ -48,6 +48,20 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
                  'centraleurope', 'caucasus', 'centralasiaN', 'centralasiaW', 'centralasiaS',
                  'lowlatitudes', 'southernandes', 'newzealand', 'antarctic']
 
+# The amount to adjust the median, area-weighted mean, or mid-range altitude to estimate the
+# balanced-budget ELA
+ELA_CONV = {'ela_mid': -27,  # Braithwaite & Raper, 2009
+            'ela_weighted': -36}  # Braithwaite, 2015
+
+ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 2012)
+        'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
+        'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
+        'length_interp': 0.249,  # root-mean square relative error in interpolating length
+        'g_abl': 0.003735,  # root-mean square error in interpolating g_abl
+        'g_acc': 0.001958,  # root-mean square error in interpolating g_acc
+        'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
+        'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
+
 gamma = fractions.Fraction(5, 4)
 p = gamma + (gamma*(1 - gamma))/(gamma - 2)
 

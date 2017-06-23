@@ -1,13 +1,21 @@
 import pandas
 import numpy
 
-from data import p, gamma, diff_vec, final_volume_vec
+from data import p, gamma, diff_vec, final_volume_vec, ELA_CONV
 
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 all_glaciers['ELA_mid'] = (all_glaciers['Zmax'] + all_glaciers['Zmin'])/2
 all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
-ela = all_glaciers[['ELA_mid', 'ELA_weighted', 'ELA_median']].mean(axis=1)
+
+ela = all_glaciers['ELA_weighted']
+
+# prefer area-weighted, if missing use mid-range
+ela_mask = ela.isnull()
+ela[ela_mask] = all_glaciers['ELA_mid'][ela_mask]
+ela_conv = ELA_CONV['ela_weighted']*numpy.ones(len(ela))
+ela_conv[ela_mask] = ELA_CONV['ela_mid']
+ela = ela + ela_conv
 
 zela = ela - (all_glaciers['Zmax'] - all_glaciers['THICK_mean'])
 G = all_glaciers['g_acc']/all_glaciers['g_abl'] - 1
@@ -60,7 +68,7 @@ def sens_glacier(param_vals):
     volumes_nd = volumes/Ldim**3
     P = zela_nd/(ca_nd**(1/gamma))
     sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rate**(-1)
-    sensitivity[sensitivity > 0] = 0
+    sensitivity[sensitivity >= 0] = 0
     return sensitivity.tolist()
 
 

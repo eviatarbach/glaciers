@@ -4,7 +4,6 @@ import numpy
 import pandas
 import sklearn
 import sklearn.model_selection
-import sklearn.neighbors
 from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
@@ -44,8 +43,6 @@ for i in range(100):
         X_norm = (X - X.mean())/(X.std())
         X_val, X_test, y_val, y_test = sklearn.model_selection.train_test_split(X_norm, y,
                                                                                 test_size=0.05)
-        coords_val = glaciers.loc[X_val.index][['lat', 'lon']]
-        coords_test = glaciers.loc[X_test.index][['lat', 'lon']]
 
         for subset in list(power_set(features))[1:]:
             subset_err = []
@@ -86,12 +83,7 @@ for gradient in ['g_abl', 'g_acc']:
     y_nn = y[not_null_indices]
 
     model = LinearRegression().fit(X_nn, y_nn)
-    coords = glaciers.loc[X_nn.index][['lat', 'lon']]
-    neighbours = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
-                                                       metric='haversine',
-                                                       algorithm='ball_tree')
-    neighbours.fit(numpy.radians(coords), y_nn)
-    error = (y_nn - (0.5*model.predict(X_nn) + 0.5*neighbours.predict(coords)))
+    error = y_nn - model.predict(X_nn)
     plt.hist(error, bins=15)
     plt.show()
 
@@ -99,14 +91,7 @@ for gradient in ['g_abl', 'g_acc']:
     subset_err = []
     for train_index, test_index in kf.split(X_nn, y_nn):
         model = LinearRegression().fit(X_nn.iloc[train_index], y_nn.iloc[train_index])
-        coords_train = glaciers.loc[X_nn.iloc[train_index].index][['lat', 'lon']]
-        coords_test = glaciers.loc[X_nn.iloc[test_index].index][['lat', 'lon']]
-        neighbours = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
-                                                           metric='haversine',
-                                                           algorithm='ball_tree')
-        neighbours.fit(numpy.radians(coords_train), y_nn.iloc[train_index])
-        error = ((0.5*model.predict(X_nn.iloc[test_index])
-                  + 0.5*neighbours.predict(coords_test)) - y_nn.iloc[test_index])
+        error = y_nn.iloc[test_index] - model.predict(X_nn.iloc[test_index])
         subset_err.append(numpy.sqrt(numpy.mean(error**2)))
 
     print(gradient, numpy.mean(subset_err))

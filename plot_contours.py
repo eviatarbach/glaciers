@@ -6,8 +6,7 @@ import plot_config
 
 import matplotlib.pyplot as plt
 
-ERRS = {'g_abl': 0.004487,  # root-mean square error in interpolating g_abl
-        'g_acc': 0.001889}  # root-mean square error in interpolating g_acc
+from data import ERRS
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
