@@ -11,7 +11,7 @@ glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
 
 def power_set(iterable):
-    # From StackOverflow
+    # From itertools documentation
     s = list(iterable)
     return itertools.chain.from_iterable(itertools.combinations(s, r) for r in range(len(s) + 1))
 
