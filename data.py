@@ -62,6 +62,8 @@ ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 
         'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
         'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
 
+ICE_DENSITY = 917
+
 gamma = fractions.Fraction(5, 4)
 p = gamma + (gamma*(1 - gamma))/(gamma - 2)
 

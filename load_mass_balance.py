@@ -1,14 +1,11 @@
 import pandas
 import numpy
-from scipy.stats import linregress
-
-import matplotlib.pyplot as plt
-
 from sklearn.linear_model import LinearRegression
+
+from data import ICE_DENSITY
 
 YEAR_START, YEAR_END = 1960, 2014
 NUM_YEARS = YEAR_END - YEAR_START + 1
-ICE_DENSITY = 917
 
 with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
           encoding='ISO-8859-1') as mb_file,\

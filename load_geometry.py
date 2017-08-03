@@ -92,18 +92,19 @@ for i, region in enumerate(RGI_REGIONS):
         hypso_data = hypso_data.set_index('RGIId   ')
 
         altitudes = numpy.float64(hypso_data.columns[2:])
+        areas = hypso_data[hypso_data.columns[2:]]
+
+        # minimum and maximum altitudes
+        region_data['alt_min'] = areas.where(areas != 0).apply(lambda r: r.first_valid_index(),
+                                                               axis=1).astype('float')
+        region_data['alt_max'] = areas.where(areas != 0).apply(lambda r: r.last_valid_index(),
+                                                               axis=1).astype('float')
 
         # area-weighted mean altitude
-        region_data['ELA_weighted'] = (altitudes*hypso_data[hypso_data.columns[2:]]
-                                       /1000).sum(axis=1)
-
-        region_data['second_moment'] = (altitudes**2*hypso_data[hypso_data.columns[2:]]
-                                        /1000).sum(axis=1)
-
-        region_data['hypso_cells'] = (hypso_data[hypso_data.columns[2:]] != 0).sum(axis=1)
+        region_data['ELA_weighted'] = (altitudes*areas/1000).sum(axis=1)
 
         # median altitude
-        region_data['ELA_median'] = median_elev(hypso_data[hypso_data.columns[2:]], altitudes)
+        region_data['median_elevation'] = median_elev(areas, altitudes)
 
         # mid-range altitude
         region_data['ELA_mid'] = (region_data['Zmax'] + region_data['Zmin'])/2
@@ -116,7 +117,8 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['Slope'] = region_data['Slope'].replace(0, numpy.nan)
         region_data['Slope'] = region_data['Slope'].replace(-9, numpy.nan)
         region_data['Lmax'] = region_data['Lmax'].replace(-9, numpy.nan)
-        region_data['ELA_median'] = region_data['ELA_median'].replace(-numpy.inf, numpy.nan)
+        region_data['median_elevation'] = region_data['median_elevation'].replace(-numpy.inf,
+                                                                                  numpy.nan)
 
         # unit conversion
 

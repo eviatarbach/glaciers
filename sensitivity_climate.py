@@ -6,6 +6,7 @@ import numpy
 import scipy.stats
 
 from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec, ELA_CONV, ERRS
+from bifurcation_distance import P0_vec
 
 
 def sample_reject(means, cov, a, b):
@@ -126,11 +127,21 @@ def run(i, ensemble=True):
             ela_err[ela_mask] = ERRS['ela_mid']
             ela = scipy.stats.norm(loc=ela, scale=ela_err).rvs(size=len(ela))
 
-        zela = ela - (region['Zmax'] - heights)
+        alt_min = region['Zmin']
+        alt_max = region['Zmax']
+
+        run_data.loc[(region_name,), 'alt_min'] = alt_min.values
+        run_data.loc[(region_name,), 'alt_max'] = alt_max.values
+
+        zela = ela - (alt_max - heights)
         zela_nd = zela/Ldim
         P = zela_nd/(ca_nd**(1/gamma))
 
+        run_data.loc[(region_name,), 'zela'] = zela.values
         run_data.loc[(region_name,), 'P'] = P.values
+
+        bif_dist = P0_vec(G) - P
+        run_data.loc[(region_name,), 'bif_dist'] = (bif_dist*(zela/P)).values
 
         sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rates**(-1)
 
@@ -146,7 +157,8 @@ def run(i, ensemble=True):
 
         run_data.loc[(region_name,), 'tau'] = tau.values
 
-    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'volumes_nd', 'g_acc', 'g_abl']]
+    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'volumes_nd', 'g_acc', 'g_abl',
+                     'bif_dist', 'alt_min', 'alt_max', 'zela']]
 
 
 def run_all(n_samples=100):

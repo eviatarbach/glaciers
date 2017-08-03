@@ -23,7 +23,7 @@ cl = all_glaciers['volume']/all_glaciers['Lmax']**p
 ca = all_glaciers['volume']/all_glaciers['area']**gamma
 
 dat_sens = numpy.vstack([G, zela, numpy.log(ca), numpy.log(cl), all_glaciers['SLOPE_avg'],
-                         numpy.log(all_glaciers['volume']), all_glaciers['lapse_rate']]).T
+                         numpy.log(all_glaciers['volume'])]).T
 dat_sens = dat_sens[~numpy.isnan(dat_sens).any(axis=1)]
 
 sens_means = dat_sens.mean(axis=0)
@@ -39,7 +39,7 @@ tau_stds = dat_tau.std(axis=0)
 
 dat_all = numpy.vstack([G, all_glaciers['g_acc'], all_glaciers['g_abl'], zela, numpy.log(ca),
                         numpy.log(cl), all_glaciers['SLOPE_avg'],
-                        numpy.log(all_glaciers['volume']), all_glaciers['lapse_rate']]).T
+                        numpy.log(all_glaciers['volume'])]).T
 dat_all = dat_all[~numpy.isnan(dat_all).any(axis=1)]
 
 all_means = dat_all.mean(axis=0)
@@ -61,13 +61,12 @@ def sens_glacier(param_vals):
     cl = numpy.exp(param_vals[:, 3])
     slopes = param_vals[:, 4]
     volumes = numpy.exp(param_vals[:, 5])
-    lapse_rate = param_vals[:, 6]
     Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
     ca_nd = ca*Ldim**(2*gamma - 3)
     zela_nd = zela/Ldim
     volumes_nd = volumes/Ldim**3
     P = zela_nd/(ca_nd**(1/gamma))
-    sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rate**(-1)
+    sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
     sensitivity[sensitivity >= 0] = 0
     return sensitivity.tolist()
 

@@ -12,6 +12,8 @@ ACC_FEATURES = ['max_elevation', 'median_elevation', 'continentality']
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
+all_glaciers['max_elevation'] = all_glaciers['Zmax']
+
 # Remove negative ablation gradients, since the timescale cannot be
 # negative
 abl_mask = ~glaciers['g_abl'].isnull() & (glaciers['g_abl'] > 0)

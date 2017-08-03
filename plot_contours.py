@@ -6,22 +6,24 @@ import plot_config
 
 import matplotlib.pyplot as plt
 
-from data import ERRS
+from data import ERRS, ICE_DENSITY
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
-g_abl_pts = numpy.linspace(glaciers['g_abl'].min(), glaciers['g_abl'].max(), 25)
-g_acc_pts = numpy.linspace(glaciers['g_acc'].min(), glaciers['g_acc'].max(), 25)
+g_abl_pts = numpy.linspace(glaciers['g_abl'].min()*ICE_DENSITY,
+                           glaciers['g_abl'].max()*ICE_DENSITY, 25)
+g_acc_pts = numpy.linspace(glaciers['g_acc'].min()*ICE_DENSITY,
+                           glaciers['g_acc'].max()*ICE_DENSITY, 25)
 
 a = (glaciers['g_acc']/glaciers['g_abl']).min()
 b = (glaciers['g_acc']/glaciers['g_abl']).max()
 
-mu_x = numpy.mean(glaciers['g_acc'])
-mu_y = numpy.mean(glaciers['g_abl'])
+mu_x = numpy.mean(glaciers['g_acc']*ICE_DENSITY)
+mu_y = numpy.mean(glaciers['g_abl']*ICE_DENSITY)
 
 
 def f(mu_x, mu_y, x, y):
-    std_x, std_y = ERRS['g_acc'], ERRS['g_abl']
+    std_x, std_y = ERRS['g_acc']*ICE_DENSITY, ERRS['g_abl']*ICE_DENSITY
     return 1/(2*numpy.pi*std_x*std_y)*numpy.exp(-1/2*((x - mu_x)/std_x)**2
                                                 - 1/2*((y - mu_y)/std_y)**2)
 
@@ -45,31 +47,25 @@ def std_abl(g_acc, g_abl):
                               numpy.inf, lambda y: a*y, lambda y: b*y)[0])
 
 
-Z = std_acc(X, Y)
-cp = plt.contourf(X, Y, Z, cmap='Blues_r')
-cbar = plt.colorbar(cp)
-cbar.ax.tick_params(labelsize=18)
-fig = plt.gcf()
-fig.set_size_inches(10, 6)
-plt.xlabel('$\dot{g}_\mathrm{acc}$ $(1/y)$', fontsize=24)
-plt.ylabel('$\dot{g}_\mathrm{abl}$ $(1/y)$', fontsize=24, rotation=0, labelpad=55)
-plt.title('$\sqrt{E\left[(\dot{g}_\mathrm{acc} - \mu_{\dot{g}_\mathrm{acc}})^2\\right]}$',
-          fontsize=24, y=1.03)
-plt.xticks(fontsize=18)
-plt.yticks(fontsize=18)
-plt.savefig('figures/contours_acc.pdf',  bbox_inches='tight')
-plt.clf()
-
-Z = std_abl(X, Y)
-cp = plt.contourf(X, Y, Z, cmap='Blues_r')
-cbar = plt.colorbar(cp)
-cbar.ax.tick_params(labelsize=18)
-fig = plt.gcf()
-fig.set_size_inches(10, 6)
-plt.xlabel('$\dot{g}_\mathrm{acc}$ $(1/y)$', fontsize=24)
-plt.ylabel('$\dot{g}_\mathrm{abl}$ $(1/y)$', fontsize=24, rotation=0, labelpad=55)
-plt.title('$\sqrt{E\left[(\dot{g}_\mathrm{abl} - \mu_{\dot{g}_\mathrm{abl}})^2\\right]}$',
-          fontsize=24, y=1.03)
-plt.xticks(fontsize=18)
-plt.yticks(fontsize=18)
-plt.savefig('figures/contours_abl.pdf',  bbox_inches='tight')
+for grad in ['acc', 'abl']:
+    if grad == 'acc':
+        Z = std_acc(X, Y)
+    else:
+        Z = std_abl(X, Y)
+    cp = plt.contourf(X, Y, Z, cmap='Blues_r')
+    cbar = plt.colorbar(cp)
+    cbar.ax.tick_params(labelsize=20)
+    fig = plt.gcf()
+    fig.set_size_inches(10, 6)
+    plt.xlabel('$\dot{g}_\mathrm{acc}$ (mm w.e./m/y)', fontsize=26)
+    plt.ylabel('$\dot{g}_\mathrm{abl}$ (mm w.e./m/y)', fontsize=26, rotation=0, labelpad=110)
+    if grad == 'acc':
+        plt.title('$\sqrt{E\left[(\dot{g}_\mathrm{acc} - \mu_{\dot{g}_\mathrm{acc}})^2\\right]}$',
+                  fontsize=26, y=1.05)
+    else:
+        plt.title('$\sqrt{E\left[(\dot{g}_\mathrm{abl} - \mu_{\dot{g}_\mathrm{abl}})^2\\right]}$',
+                  fontsize=26, y=1.05)
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
+    plt.savefig('figures/contours_{grad}.pdf'.format(grad=grad),  bbox_inches='tight')
+    plt.close(fig)
