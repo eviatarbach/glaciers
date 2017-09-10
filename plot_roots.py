@@ -17,7 +17,7 @@ for i, P in enumerate([0.37, 0.38, P0, 0.39]):
 legend = plt.legend(title='$P^*$', fontsize=20, bbox_to_anchor=(1.12, 1.0))
 plt.setp(legend.get_title(), fontsize=18)
 plt.xlabel('$V^*$', fontsize=24)
-plt.ylabel('$F(0, P^*, V^*)$', fontsize=24, rotation=0, labelpad=53)
+plt.ylabel('$F(V^*, 0, P^*)$', fontsize=24, rotation=0, labelpad=53)
 plt.plot([0, 0.15], [0, 0], color='black', linewidth=0.6, zorder=0)
 ax = plt.gca()
 ax.spines["top"].set_visible(False)

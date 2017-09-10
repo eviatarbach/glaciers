@@ -57,8 +57,8 @@ ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 
         'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
         'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
         'length_interp': 0.249,  # root-mean square relative error in interpolating length
-        'g_abl': 0.003735,  # root-mean square error in interpolating g_abl
-        'g_acc': 0.001958,  # root-mean square error in interpolating g_acc
+        'g_abl': 0.003751,  # root-mean square error in interpolating g_abl
+        'g_acc': 0.002326,  # root-mean square error in interpolating g_acc
         'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
         'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
 

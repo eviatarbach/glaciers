@@ -36,8 +36,6 @@ def median_elev(hypso, elevs):
     return elevs[i_lower] + (50*(500 - cumsum_lower)/(cumsum_upper - cumsum_lower))
 
 
-data = pandas.DataFrame(columns=['RGIId', 'Slope', 'Aspect'])
-
 thickness_regex = re.compile('^(\d+);' + '\s+([-.0-9]+)'*18 + ';\s+(\d+)\s+(.+)$',
                              flags=re.MULTILINE)
 
@@ -53,7 +51,6 @@ for i, region in enumerate(RGI_REGIONS):
 
         region_data = geopandas.read_file('data/{num}_rgi50_{name}'.format(num=region_id,
                                                                            name=region))
-        data = data.append(region_data[['RGIId', 'Slope', 'Aspect']])
 
         region_data = region_data.drop(['BgnDate', 'EndDate', 'GLIMSId', 'geometry'], axis=1)
         region_data['Region'] = region
@@ -93,12 +90,6 @@ for i, region in enumerate(RGI_REGIONS):
 
         altitudes = numpy.float64(hypso_data.columns[2:])
         areas = hypso_data[hypso_data.columns[2:]]
-
-        # minimum and maximum altitudes
-        region_data['alt_min'] = areas.where(areas != 0).apply(lambda r: r.first_valid_index(),
-                                                               axis=1).astype('float')
-        region_data['alt_max'] = areas.where(areas != 0).apply(lambda r: r.last_valid_index(),
-                                                               axis=1).astype('float')
 
         # area-weighted mean altitude
         region_data['ELA_weighted'] = (altitudes*areas/1000).sum(axis=1)
@@ -186,20 +177,3 @@ with open('data/GlaThiDa_2014/T.csv', 'r', encoding='ISO-8859-1') as glathida_fi
     all_glaciers.loc[valid_indices, 'THICK_mean'] = conv['MEAN_THICKNESS'].values[valid_mask]
 
     all_glaciers.to_pickle('data/serialized/all_glaciers')
-
-with open('data/MAIL_WGMS/00_rgi50_links.20151130_WithCategories.csv', 'r',
-          encoding='ISO-8859-1') as id_file:
-    # Load slope and aspect data into WGMS data
-    data = data.set_index(['RGIId'])
-
-    data_id = pandas.read_csv(id_file, usecols=['RGIId', 'FoGId'], index_col=['FoGId'])
-
-    glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
-
-    conv = data_id.loc[glaciers.index.values].dropna()
-
-    rgi_ids = list(conv.values.flatten())
-
-    conv['Slope'] = data.loc[rgi_ids]['Slope'].values
-    conv['Aspect'] = data.loc[rgi_ids]['Aspect'].values
-    glaciers[['slope', 'aspect']] = conv[['Slope', 'Aspect']]

@@ -7,13 +7,13 @@ from data import ICE_DENSITY
 YEAR_START, YEAR_END = 1960, 2014
 NUM_YEARS = YEAR_END - YEAR_START + 1
 
-with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
+with open('data/DOI-WGMS-FoG-2017-06/WGMS-FoG-2017-06-EE-MASS-BALANCE.csv', 'r',
           encoding='ISO-8859-1') as mb_file,\
-     open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-A-GENERAL-INFORMATION.csv', 'r',
+     open('data/DOI-WGMS-FoG-2017-06/WGMS-FoG-2017-06-A-GLACIER.csv', 'r',
           encoding='ISO-8859-1') as latlon_file,\
-     open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-B-STATE.csv', 'r',
+     open('data/DOI-WGMS-FoG-2017-06/WGMS-FoG-2017-06-B-STATE.csv', 'r',
           encoding='ISO-8859-1') as elev_file,\
-     open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-E-MASS-BALANCE-OVERVIEW.csv', 'r',
+     open('data/DOI-WGMS-FoG-2017-06/WGMS-FoG-2017-06-E-MASS-BALANCE-OVERVIEW.csv', 'r',
           encoding='ISO-8859-1') as ela_file:
 
     data_mb = pandas.read_csv(mb_file, index_col=['WGMS_ID', 'YEAR'],
@@ -52,8 +52,8 @@ with open('data/DOI-WGMS-FoG-2015-11/WGMS-FoG-2015-11-EE-MASS-BALANCE.csv', 'r',
 
     data_mb = data_mb.sort_index(level=[0, 1])
 
-    data_ela = pandas.read_csv(ela_file, index_col=['WGMS_ID', 'YEAR'],
-                               usecols=['WGMS_ID', 'YEAR', 'ELA_PREFIX', 'ELA'])
+    data_ela = pandas.read_csv(ela_file, index_col=['WGMS_ID', 'Year'],
+                               usecols=['WGMS_ID', 'Year', 'ELA_PREFIX', 'ELA'])
 
     data_ela = data_ela.sort_index(level=[0, 1])
 

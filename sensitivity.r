@@ -52,8 +52,8 @@ HSIC_tau <- function(n_samples=500){
 
 pairwise_HSIC <- function(n_samples=1000){
   X <- sample_all(n_samples)
-  pairs <- combn(1:9, 2)
-  HSIC_mat <- matrix(0, nrow=9, ncol=9)
+  pairs <- combn(1:8, 2)
+  HSIC_mat <- matrix(0, nrow=8, ncol=8)
   for(i in 1:dim(pairs)[2]){
     HSIC_mat[pairs[1, i], pairs[2, i]] <- tell(sensiHSIC(X=X[, c(pairs[1, i], pairs[1, i])]),
                                                y=X[, pairs[2, i]])$S$original[1]

@@ -13,7 +13,7 @@ def sample_reject(means, cov, a, b):
     samples = numpy.zeros([len(means), 2])
     for i, mean in enumerate(means):
         dist_acc = scipy.stats.norm(loc=mean[0], scale=cov[0][0])
-        dist_abl = scipy.stats.norm(loc=mean[1], scale=cov[1][1])  # scipy.stats.lognorm(*ABL_ERROR)
+        dist_abl = scipy.stats.norm(loc=mean[1], scale=cov[1][1])
         sample = numpy.vstack([dist_acc.rvs(size=10), dist_abl.rvs(size=10)]).T
         mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
                 & (sample[:, 0]/sample[:, 1] > a))
@@ -37,8 +37,11 @@ region_volumes = []
 all_glaciers = all_glaciers.sort_index(level=[0, 1])
 
 
-def run(i, ensemble=True):
-    print(i)
+def run(_, ensemble=True):
+    if ensemble:
+        with lock:
+            iteration.value += 1
+            print(iteration.value)
     numpy.random.seed()
     run_data = all_glaciers.copy()
     for i, region_name in enumerate(RGI_REGIONS):
@@ -85,8 +88,6 @@ def run(i, ensemble=True):
             lengths.loc[interp_length_mask] = scipy.stats.lognorm(scale=lengths[interp_length_mask],
                                                                   s=ERRS['length_interp']).rvs(size=sum(interp_length_mask))
 
-        lapse_rates = region['lapse_rate']
-
         g_acc = region['g_acc'].values
         g_abl = region['g_abl'].values
 
@@ -127,13 +128,7 @@ def run(i, ensemble=True):
             ela_err[ela_mask] = ERRS['ela_mid']
             ela = scipy.stats.norm(loc=ela, scale=ela_err).rvs(size=len(ela))
 
-        alt_min = region['Zmin']
-        alt_max = region['Zmax']
-
-        run_data.loc[(region_name,), 'alt_min'] = alt_min.values
-        run_data.loc[(region_name,), 'alt_max'] = alt_max.values
-
-        zela = ela - (alt_max - heights)
+        zela = ela - (region['Zmax'] - heights)
         zela_nd = zela/Ldim
         P = zela_nd/(ca_nd**(1/gamma))
 
@@ -143,7 +138,7 @@ def run(i, ensemble=True):
         bif_dist = P0_vec(G) - P
         run_data.loc[(region_name,), 'bif_dist'] = (bif_dist*(zela/P)).values
 
-        sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)*lapse_rates**(-1)
+        sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
 
         run_data.loc[(region_name,), 'sensitivity'] = sensitivity.values
 
@@ -157,11 +152,14 @@ def run(i, ensemble=True):
 
         run_data.loc[(region_name,), 'tau'] = tau.values
 
-    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'volumes_nd', 'g_acc', 'g_abl',
-                     'bif_dist', 'alt_min', 'alt_max', 'zela']]
+    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'bif_dist']]
 
 
 def run_all(n_samples=100):
+    global iteration
+    global lock
+    iteration = multiprocessing.Value('i', 0)
+    lock = multiprocessing.Lock()
     pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
     all_data = pool.map(run, range(n_samples))
     pickle.dump(all_data, open('data/serialized/all_data', 'wb'))

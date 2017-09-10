@@ -5,7 +5,6 @@ from data import p, gamma, diff_vec, final_volume_vec, ELA_CONV
 
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
-all_glaciers['ELA_mid'] = (all_glaciers['Zmax'] + all_glaciers['Zmin'])/2
 all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
 
 ela = all_glaciers['ELA_weighted']
