@@ -21,7 +21,8 @@ G = all_glaciers['g_acc']/all_glaciers['g_abl'] - 1
 cl = all_glaciers['volume']/all_glaciers['Lmax']**p
 ca = all_glaciers['volume']/all_glaciers['area']**gamma
 
-dat_sens = numpy.vstack([G, zela, numpy.log(ca), numpy.log(cl), all_glaciers['SLOPE_avg'],
+dat_sens = numpy.vstack([G, zela, numpy.log(ca), numpy.log(cl),
+                         numpy.arctan(all_glaciers['SLOPE_avg']),
                          numpy.log(all_glaciers['volume'])]).T
 dat_sens = dat_sens[~numpy.isnan(dat_sens).any(axis=1)]
 
@@ -29,7 +30,7 @@ sens_means = dat_sens.mean(axis=0)
 sens_stds = dat_sens.std(axis=0)
 
 dat_tau = numpy.vstack([all_glaciers['g_acc'], all_glaciers['g_abl'], zela, numpy.log(ca),
-                        numpy.log(cl), all_glaciers['SLOPE_avg'],
+                        numpy.log(cl), numpy.arctan(all_glaciers['SLOPE_avg']),
                         numpy.log(all_glaciers['volume'])]).T
 dat_tau = dat_tau[~numpy.isnan(dat_tau).any(axis=1)]
 
@@ -37,7 +38,7 @@ tau_means = dat_tau.mean(axis=0)
 tau_stds = dat_tau.std(axis=0)
 
 dat_all = numpy.vstack([G, all_glaciers['g_acc'], all_glaciers['g_abl'], zela, numpy.log(ca),
-                        numpy.log(cl), all_glaciers['SLOPE_avg'],
+                        numpy.log(cl), numpy.arctan(all_glaciers['SLOPE_avg']),
                         numpy.log(all_glaciers['volume'])]).T
 dat_all = dat_all[~numpy.isnan(dat_all).any(axis=1)]
 
@@ -58,7 +59,7 @@ def sens_glacier(param_vals):
     zela = param_vals[:, 1]
     ca = numpy.exp(param_vals[:, 2])
     cl = numpy.exp(param_vals[:, 3])
-    slopes = param_vals[:, 4]
+    slopes = numpy.tan(param_vals[:, 4])
     volumes = numpy.exp(param_vals[:, 5])
     Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
     ca_nd = ca*Ldim**(2*gamma - 3)
@@ -79,7 +80,7 @@ def tau_glacier(param_vals):
     zela = param_vals[:, 2]
     ca = numpy.exp(param_vals[:, 3])
     cl = numpy.exp(param_vals[:, 4])
-    slopes = param_vals[:, 5]
+    slopes = numpy.tan(param_vals[:, 5])
     volumes = numpy.exp(param_vals[:, 6])
     G = g_acc/g_abl - 1
     Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))

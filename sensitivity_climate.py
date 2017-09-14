@@ -52,9 +52,11 @@ def run(_, ensemble=True):
 
         slopes = region['SLOPE_avg']
         if ensemble:
-            scale = 0.255*slopes**3.349
-            slopes = scipy.stats.truncnorm(a=-slopes/scale, b=numpy.inf, loc=slopes,
-                                           scale=scale).rvs(size=len(slopes))
+            scale = 0.255*numpy.arctan(slopes)**3.349
+            slopes = numpy.tan(scipy.stats.truncnorm(a=-numpy.arctan(slopes)/scale,
+                                                     b=(numpy.pi/2 - numpy.arctan(slopes))/scale,
+                                                     loc=numpy.arctan(slopes),
+                                                     scale=scale).rvs(size=len(slopes)))
 
         areas = region['area']
         if ensemble:

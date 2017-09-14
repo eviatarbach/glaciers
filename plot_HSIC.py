@@ -15,12 +15,12 @@ ax.set_xlim([0, 1])
 ax.set_ylim([-1, 6])
 
 plt.yticks(range(7), ['$G^*$', '$z_\mathrm{ela}$', 'log $c_a$', 'log $c_l$',
-                      r'$\beta$', 'log $V$'], fontsize=20,
+                      r'tan${}^{-1}\beta$', 'log $V$'], fontsize=20,
            horizontalalignment='left')
 plt.xticks(fontsize=18)
 
 yax = ax.get_yaxis()
-yax.set_tick_params(pad=60)
+yax.set_tick_params(pad=70)
 
 plt.xlabel('$S_i$ (sensitivity)', fontsize=20)
 
@@ -43,13 +43,13 @@ ax.set_xlim([0, 0.4])
 ax.set_ylim([-1, 7])
 
 plt.yticks(range(7), ['$\dot{g}_\mathrm{acc}$', '$\dot{g}_\mathrm{abl}$', '$z_\mathrm{ela}$',
-                      'log $c_a$', 'log $c_l$', r'$\beta$',
+                      'log $c_a$', 'log $c_l$', r'tan${}^{-1}\beta$',
                       'log $V$'], fontsize=20,
            horizontalalignment='left')
 plt.xticks(fontsize=18)
 
 yax = ax.get_yaxis()
-yax.set_tick_params(pad=60)
+yax.set_tick_params(pad=70)
 
 plt.xlabel('$S_i$ (response time)', fontsize=20)
 

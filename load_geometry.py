@@ -113,9 +113,9 @@ for i, region in enumerate(RGI_REGIONS):
 
         # unit conversion
 
-        # degrees to radians
-        region_data['SLOPE_avg'] *= numpy.pi/180
-        region_data['Slope'] *= numpy.pi/180
+        # degrees to radians, then to slope
+        region_data['SLOPE_avg'] = numpy.tan(region_data['SLOPE_avg']*numpy.pi/180)
+        region_data['Slope'] = numpy.tan(region_data['Slope']*numpy.pi/180)
 
         # km to m
         region_data['Area'] *= 1000**2

@@ -84,7 +84,10 @@ equation_diff = RationalPowers(numpy.array([1/gamma - 1/p - 1, -1/gamma - 1/p + 
 
 
 def eq_volume(G, P):
-    return equation.find_roots(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, 1, -1]))
+    roots = equation.find_roots(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, 1, -1]))[1:]
+    # Remove unphysical steady states
+    mask = (-2*roots**(-1 + 2/gamma) + roots**((gamma - 1)/gamma) < P) & (roots**(1 - 1/gamma) > P)
+    return numpy.append(0, roots[mask])
 
 
 def final_volume(G, P, V):
@@ -96,7 +99,7 @@ def final_volume(G, P, V):
         # and non-negative
         return eq_volumes[loc - 1]
     lower, upper = (loc - 1, loc) if loc != 0 else (loc, loc + 1)
-    if stability(G, P, eq_volumes[lower]) == -1:
+    if equation.evaluate(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, 1, -1]), V) < 0:
         return eq_volumes[lower]
     else:
         return eq_volumes[upper]

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 
 from data import eq_volume
 
-# TODO: negative G, positive P
 
 def c0(G, P):
     res = eq_volume(G, P)
@@ -16,18 +15,12 @@ def c0(G, P):
 
 def c1(G, P):
     res = eq_volume(G, P)
-    if G < 0:
-        return res[1] if (len(res) >= 2) else numpy.nan
-    else:
-        return res[0]
+    return res[1] if (len(res) >= 2) else numpy.nan
 
 
 def c2(G, P):
     res = eq_volume(G, P)
-    if G < 0:
-        return res[2] if (len(res) >= 3) else numpy.nan
-    else:
-        return res[1] if (len(res) >= 2) else numpy.nan
+    return res[2] if (len(res) == 3) else numpy.nan
 
 
 c0v = numpy.vectorize(c0)
@@ -40,25 +33,53 @@ Pmin, Pmax = -50, 10
 G = numpy.linspace(Gmin, Gmax, 30)
 G_neg = numpy.linspace(Gmin, 0, 15)
 G_pos = numpy.linspace(0, Gmax, 15)
-P = numpy.linspace(Pmin, Pmax, 30)
+P_neg = numpy.linspace(Pmin, 0, 25)
+P_pos = numpy.linspace(0, Pmax, 5)
 
-Gmesh, Pmesh = numpy.meshgrid(G, P)
-Gmesh_neg, Pmesh_neg = numpy.meshgrid(G_neg, P)
-Gmesh_pos, Pmesh_pos = numpy.meshgrid(G_pos, P)
+G_an, P_an = numpy.meshgrid(G, P_neg)
+G_nn, P_nn = numpy.meshgrid(G_neg, P_neg)
+G_pp, P_pp = numpy.meshgrid(G_pos, P_pos)
+G_pn, P_pn = numpy.meshgrid(G_pos, P_neg)
+G_np, P_np = numpy.meshgrid(G_neg, P_pos)
 
-Z0_neg = c0v(Gmesh_neg, Pmesh_neg)
+Z1_an = c1v(G_an, P_an)
 
-Z1 = c1v(Gmesh, Pmesh)
-Z2 = c2v(Gmesh, Pmesh)
+Z0_nn = c0v(G_nn, P_nn)
+
+Z0_pn = c0v(G_pn, P_pn)
+
+Z0_np = c0v(G_np, P_np)
+Z1_np = c1v(G_np, P_np)
+Z2_np = c2v(G_np, P_np)
+
+Z0_pp = c0v(G_pp, P_pp)
+Z1_pp = c1v(G_pp, P_pp)
+Z2_pp = c2v(G_pp, P_pp)
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
-ax.plot_wireframe(Gmesh, Pmesh, Z2, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.8)
-ax.plot_wireframe(Gmesh, Pmesh, Z1, alpha=1, cstride=1, rstride=1, color='black', linewidth=0.7,
+ax.plot_wireframe(G_an, P_an, Z1_an, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.8)
+
+ax.plot_wireframe(G_nn, P_nn, Z0_nn, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.8)
+
+ax.plot_wireframe(G_pn, P_pn, Z0_pn, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.7,
                   linestyle='dotted')
-ax.plot_wireframe(Gmesh_neg, Pmesh_neg, Z0_neg, alpha=0.5, cstride=1, rstride=1, color='black',
+
+ax.plot_wireframe(G_np, P_np, Z0_np, alpha=0.5, cstride=1, rstride=1, color='black',
                   linewidth=0.8)
+ax.plot_wireframe(G_np, P_np, Z1_np, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.7,
+                  linestyle='dotted')
+ax.plot_wireframe(G_np, P_np, Z2_np, alpha=0.5, cstride=1, rstride=1, color='black',
+                  linewidth=0.8)
+
+ax.plot_wireframe(G_pp, P_pp, Z0_pp, alpha=0.5, cstride=1, rstride=1, color='black',
+                  linewidth=0.8)
+ax.plot_wireframe(G_pp, P_pp, Z1_pp, alpha=0.5, cstride=1, rstride=1, color='black', linewidth=0.7,
+                  linestyle='dotted')
+ax.plot_wireframe(G_pp, P_pp, Z2_pp, alpha=0.5, cstride=1, rstride=1, color='black',
+                  linewidth=0.8)
+
 plt.rc('text', usetex=True)
 ax.xaxis.set_rotate_label(False)
 ax.yaxis.set_rotate_label(False)
