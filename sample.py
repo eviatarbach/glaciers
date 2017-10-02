@@ -1,44 +1,33 @@
 import pandas
 import numpy
 
-from data import p, gamma, diff_vec, final_volume_vec, ELA_CONV
+from data import p, gamma
 
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
 
-ela = all_glaciers['ELA_weighted']
-
-# prefer area-weighted, if missing use mid-range
-ela_mask = ela.isnull()
-ela[ela_mask] = all_glaciers['ELA_mid'][ela_mask]
-ela_conv = ELA_CONV['ela_weighted']*numpy.ones(len(ela))
-ela_conv[ela_mask] = ELA_CONV['ela_mid']
-ela = ela + ela_conv
-
-zela = ela - (all_glaciers['Zmax'] - all_glaciers['THICK_mean'])
-G = all_glaciers['g_acc']/all_glaciers['g_abl'] - 1
+G = all_glaciers['G']
 cl = all_glaciers['volume']/all_glaciers['Lmax']**p
 ca = all_glaciers['volume']/all_glaciers['area']**gamma
 
-dat_sens = numpy.vstack([G, zela, numpy.log(ca), numpy.log(cl),
-                         numpy.arctan(all_glaciers['SLOPE_avg']),
+dat_sens = numpy.vstack([G, numpy.log(ca), numpy.log(cl), numpy.arctan(all_glaciers['SLOPE_avg']),
                          numpy.log(all_glaciers['volume'])]).T
 dat_sens = dat_sens[~numpy.isnan(dat_sens).any(axis=1)]
 
 sens_means = dat_sens.mean(axis=0)
 sens_stds = dat_sens.std(axis=0)
 
-dat_tau = numpy.vstack([all_glaciers['g_acc'], all_glaciers['g_abl'], zela, numpy.log(ca),
-                        numpy.log(cl), numpy.arctan(all_glaciers['SLOPE_avg']),
+dat_tau = numpy.vstack([G, all_glaciers['g_abl'], numpy.log(ca), numpy.log(cl),
+                        numpy.arctan(all_glaciers['SLOPE_avg']),
                         numpy.log(all_glaciers['volume'])]).T
 dat_tau = dat_tau[~numpy.isnan(dat_tau).any(axis=1)]
 
 tau_means = dat_tau.mean(axis=0)
 tau_stds = dat_tau.std(axis=0)
 
-dat_all = numpy.vstack([G, all_glaciers['g_acc'], all_glaciers['g_abl'], zela, numpy.log(ca),
-                        numpy.log(cl), numpy.arctan(all_glaciers['SLOPE_avg']),
+dat_all = numpy.vstack([G, all_glaciers['g_abl'], numpy.log(ca), numpy.log(cl),
+                        numpy.arctan(all_glaciers['SLOPE_avg']),
                         numpy.log(all_glaciers['volume'])]).T
 dat_all = dat_all[~numpy.isnan(dat_all).any(axis=1)]
 
@@ -56,18 +45,17 @@ def sens_glacier(param_vals):
     param_vals = pandas.DataFrame(param_vals).values
     param_vals = param_vals*sens_stds + sens_means
     G = param_vals[:, 0]
-    zela = param_vals[:, 1]
-    ca = numpy.exp(param_vals[:, 2])
-    cl = numpy.exp(param_vals[:, 3])
-    slopes = numpy.tan(param_vals[:, 4])
-    volumes = numpy.exp(param_vals[:, 5])
+    ca = numpy.exp(param_vals[:, 1])
+    cl = numpy.exp(param_vals[:, 2])
+    slopes = numpy.tan(param_vals[:, 3])
+    volumes = numpy.exp(param_vals[:, 4])
     Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
-    ca_nd = ca*Ldim**(2*gamma - 3)
-    zela_nd = zela/Ldim
+    V_0 = (G*(gamma - 1)/(2*(numpy.sqrt(G + 1) - 1)*(2 - gamma)))**(gamma/(3 - 2*gamma))
     volumes_nd = volumes/Ldim**3
-    P = zela_nd/(ca_nd**(1/gamma))
-    sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
-    sensitivity[sensitivity >= 0] = 0
+    diff = gamma*G*volumes_nd**((2*gamma + 1)/gamma)/(2*(gamma - 2)*(numpy.sqrt(G + 1) - 1)*volumes_nd**(3/gamma) + (gamma - 1)*G*volumes_nd**2)
+    sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff
+    sensitivity[volumes_nd < V_0] = 0
+    sensitivity[numpy.isnan(sensitivity)] = 0
     return sensitivity.tolist()
 
 
@@ -75,24 +63,21 @@ def tau_glacier(param_vals):
     """Compute the sensitivity of the glaciers with parameters given in `param_vals`."""
     param_vals = pandas.DataFrame(param_vals).values
     param_vals = param_vals*tau_stds + tau_means
-    g_acc = param_vals[:, 0]
+    G = param_vals[:, 0]
     g_abl = param_vals[:, 1]
-    zela = param_vals[:, 2]
-    ca = numpy.exp(param_vals[:, 3])
-    cl = numpy.exp(param_vals[:, 4])
-    slopes = numpy.tan(param_vals[:, 5])
-    volumes = numpy.exp(param_vals[:, 6])
-    G = g_acc/g_abl - 1
+    ca = numpy.exp(param_vals[:, 2])
+    cl = numpy.exp(param_vals[:, 3])
+    slopes = numpy.tan(param_vals[:, 4])
+    volumes = numpy.exp(param_vals[:, 5])
     Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
-    ca_nd = ca*Ldim**(2*gamma - 3)
-    zela_nd = zela/Ldim
+    V_0 = (G*(gamma - 1)/(2*(numpy.sqrt(G + 1) - 1)*(2 - gamma)))**(gamma/(3 - 2*gamma))
     volumes_nd = volumes/Ldim**3
-    P = zela_nd/(ca_nd**(1/gamma))
-    volumes_ss = final_volume_vec(G, P, volumes_nd)
-    tau = -(1/20*G*P**2/volumes_ss**(4/5) - 1/5*G*P/volumes_ss**(3/5)
-            - 4/5*P/volumes_ss**(1/5) + 3/20*G/volumes_ss**(2/5) - 7/5*volumes_ss**(2/5)
+    P = (G*volumes_nd**2 - 2*volumes_nd**(3/gamma)*(numpy.sqrt(G + 1) - 1))/(G*volumes_nd**((1 + gamma)/gamma))
+    tau = -(1/20*G*P**2/volumes_nd**(4/5) - 1/5*G*P/volumes_nd**(3/5)
+            - 4/5*P/volumes_nd**(1/5) + 3/20*G/volumes_nd**(2/5) - 7/5*volumes_nd**(2/5)
             + 1)**(-1)*g_abl**(-1)
-    tau[volumes_ss == 0] = 0
+    tau[volumes_nd < V_0] = 0
+    tau[numpy.isnan(tau)] = 0
     return tau.tolist()
 
 

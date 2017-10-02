@@ -57,13 +57,15 @@ for grad in ['acc', 'abl']:
     cbar.ax.tick_params(labelsize=20)
     fig = plt.gcf()
     fig.set_size_inches(10, 6)
-    plt.xlabel('$\dot{g}_\mathrm{acc}$ (mm w.e./m/y)', fontsize=26)
-    plt.ylabel('$\dot{g}_\mathrm{abl}$ (mm w.e./m/y)', fontsize=26, rotation=0, labelpad=110)
+    plt.xlabel(r'$\dot{g}_\text{acc}$ (mm w.e./m/y)', fontsize=26)
+    plt.ylabel(r'$\dot{g}_\text{abl}$ (mm w.e./m/y)', fontsize=26, rotation=0, labelpad=110)
     if grad == 'acc':
-        plt.title('$\sqrt{E\left[(\dot{g}_\mathrm{acc} - \mu_{\dot{g}_\mathrm{acc}})^2\\right]}$',
+        plt.title(r'$\sqrt{\text{E}\left[(\dot{g}_\text{acc}'
+                  r'- \mu_{\dot{g}_\text{acc}})^2\right]}$',
                   fontsize=26, y=1.05)
     else:
-        plt.title('$\sqrt{E\left[(\dot{g}_\mathrm{abl} - \mu_{\dot{g}_\mathrm{abl}})^2\\right]}$',
+        plt.title(r'$\sqrt{\text{E}\left[(\dot{g}_\text{abl}'
+                  r'- \mu_{\dot{g}_\text{abl}})^2\right]}$',
                   fontsize=26, y=1.05)
     plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)

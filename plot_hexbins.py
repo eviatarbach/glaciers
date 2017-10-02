@@ -15,8 +15,8 @@ TICK_SIZE = 14
 single_data = pandas.read_pickle('data/serialized/single_data')
 sens = single_data['sensitivity']
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
-slopes = numpy.arctan(all_glaciers.loc[sens.index]['SLOPE_avg'])
-vols = all_glaciers.loc[sens.index]['volume']
+slopes = numpy.arctan(all_glaciers['SLOPE_avg'])
+vols = all_glaciers['volume']
 vols_ss = single_data['volumes_ss']
 
 tau = single_data['tau']

@@ -1,109 +1,52 @@
-import multiprocessing
-import pickle
+from data import RGI_REGIONS, p, gamma, ERRS
 
 import pandas
 import numpy
-import scipy.stats
-
-from data import RGI_REGIONS, p, gamma, final_volume_vec, diff_vec, ELA_CONV, ERRS
-from bifurcation_distance import P0_vec
-
-
-def sample_reject(means, cov, a, b):
-    samples = numpy.zeros([len(means), 2])
-    for i, mean in enumerate(means):
-        dist_acc = scipy.stats.norm(loc=mean[0], scale=cov[0][0])
-        dist_abl = scipy.stats.norm(loc=mean[1], scale=cov[1][1])
-        sample = numpy.vstack([dist_acc.rvs(size=10), dist_abl.rvs(size=10)]).T
-        mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
-                & (sample[:, 0]/sample[:, 1] > a))
-        while sum(mask) == 0:
-            sample = numpy.vstack([dist_acc.rvs(size=10), dist_abl.rvs(size=10)]).T
-            mask = ((sample[:, 1] > 0) & (sample[:, 0]/sample[:, 1] < b)
-                    & (sample[:, 0]/sample[:, 1] > a))
-        samples[i, :] = sample[numpy.where(mask)[0][0]]
-    return samples[:, 0], samples[:, 1]
+from uncertainties import unumpy
+sqrt = unumpy.sqrt
+arctan = unumpy.arctan
+tan = unumpy.tan
 
 
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 
-# remove all glaciers whose ELA is above or below the glacier, for some reason
-# all_glaciers = all_glaciers[(all_glaciers['Zmin'] < all_glaciers['ELA'])
-#                             & (all_glaciers['ELA'] < all_glaciers['Zmax'])]
-
-region_volumes = []
-
 all_glaciers = all_glaciers.sort_index(level=[0, 1])
 
 
-def run(_, ensemble=True):
-    if ensemble:
-        with lock:
-            iteration.value += 1
-            print(iteration.value)
-    numpy.random.seed()
+def run():
     run_data = all_glaciers.copy()
     for i, region_name in enumerate(RGI_REGIONS):
+        print(region_name)
         region = run_data.loc[region_name]
 
-        # Restore all heights that were less than 0
-        # heights = heights + (heights <= 0)*region['THICK_mean']
-
         slopes = region['SLOPE_avg']
-        if ensemble:
-            scale = 0.255*numpy.arctan(slopes)**3.349
-            slopes = numpy.tan(scipy.stats.truncnorm(a=-numpy.arctan(slopes)/scale,
-                                                     b=(numpy.pi/2 - numpy.arctan(slopes))/scale,
-                                                     loc=numpy.arctan(slopes),
-                                                     scale=scale).rvs(size=len(slopes)))
+        slopes = unumpy.uarray(slopes, tan(0.255*arctan(slopes)**3.349))
 
         areas = region['area']
-        if ensemble:
-            scale = 7.3822*areas**0.7
-            areas = scipy.stats.truncnorm(a=-areas/scale, b=numpy.inf, loc=areas,
-                                          scale=scale).rvs(size=len(areas))
+        areas = unumpy.uarray(areas, 7.3822*areas**0.7)
 
         interp_volume_mask = region['interp_volume']
 
-        volumes = region['volume']
-        heights = region['THICK_mean']
-        if ensemble:
-            heights = scipy.stats.lognorm(scale=heights, s=ERRS['height']).rvs(size=len(heights))
+        heights = unumpy.uarray(region['THICK_mean'], ERRS['height']*region['THICK_mean'])
 
         # Multiplying area by height instead of using volume directly since we have uncertainty
         # estimates provided in the height, not in the volume.
-        volumes.loc[~interp_volume_mask] = (areas*heights)[~interp_volume_mask]
+        volumes = areas*heights
+        volumes[interp_volume_mask] = unumpy.uarray(region['volume'][interp_volume_mask],
+                                                    ERRS['vol_interp']*region['volume'][interp_volume_mask])
 
-        if ensemble:
-            # For the rest of the volumes, we need to add the interpolation error
-            volumes.loc[interp_volume_mask] = scipy.stats.lognorm(scale=volumes[interp_volume_mask],
-                                                                  s=ERRS['vol_interp']).rvs(size=sum(interp_volume_mask))
-
-        lengths = region['Lmax']
+        lengths = unumpy.uarray(region['Lmax'], ERRS['length']*region['Lmax'])
         interp_length_mask = region['interp_length']
+        lengths[interp_length_mask] = unumpy.uarray(region['Lmax'][interp_length_mask],
+                                                    ERRS['length_interp']*region['Lmax'][interp_length_mask])
 
-        if ensemble:
-            lengths.loc[~interp_length_mask] = scipy.stats.lognorm(scale=lengths[~interp_length_mask],
-                                                                   s=ERRS['length']).rvs(size=sum(~interp_length_mask))
+        g_abl = unumpy.uarray(region['g_abl'].values, ERRS['g_abl'])
+        G = unumpy.uarray(region['G'].values, ERRS['G'])
 
-            lengths.loc[interp_length_mask] = scipy.stats.lognorm(scale=lengths[interp_length_mask],
-                                                                  s=ERRS['length_interp']).rvs(size=sum(interp_length_mask))
+        mask_G = (unumpy.nominal_values(g_abl) > 0) & (unumpy.nominal_values(G) > -1)
 
-        g_acc = region['g_acc'].values
-        g_abl = region['g_abl'].values
-
-        if ensemble:
-            g_acc, g_abl = sample_reject(means=numpy.vstack([g_acc, g_abl]).T,
-                                         cov=numpy.diag([ERRS['g_acc'], ERRS['g_abl']]),
-                                         a=(glaciers['g_acc']/glaciers['g_abl']).min(),
-                                         b=(glaciers['g_acc']/glaciers['g_abl']).max())
-
-        G = g_acc/g_abl - 1
-
-        run_data.loc[(region_name,), 'G'] = G
-        run_data.loc[(region_name,), 'g_abl'] = g_abl
-        run_data.loc[(region_name,), 'g_acc'] = g_acc
+        V_0 = (unumpy.nominal_values(G)*(gamma - 1)/(2*(numpy.sqrt(unumpy.nominal_values(G) + 1) - 1)*(2 - gamma)))**(gamma/(3 - 2*gamma))
 
         cl = volumes/(lengths**p)
         ca = volumes/(areas**gamma)
@@ -112,61 +55,52 @@ def run(_, ensemble=True):
 
         volumes_nd = volumes/Ldim**3
 
-        run_data.loc[(region_name,), 'volumes_nd'] = volumes_nd.values
+        mask = mask_G & (unumpy.nominal_values(volumes_nd) > V_0)
 
-        cl_nd = cl*Ldim**(p - 3)
-        ca_nd = ca*Ldim**(2*gamma - 3)
+        run_data.loc[(region_name,), 'G'] = unumpy.nominal_values(G)
 
-        ela = region['ELA_weighted']
+        P = unumpy.uarray(numpy.zeros(len(region)), numpy.zeros(len(region)))
+        P[mask] = (G[mask]*volumes_nd[mask]**2 - 2*volumes_nd[mask]**(3/gamma)*(sqrt(G[mask] + 1) - 1))/(G[mask]*volumes_nd[mask]**((1 + gamma)/gamma))
+        P[~mask] = numpy.nan
+        run_data.loc[(region_name,), 'P'] = unumpy.nominal_values(P)
 
-        # prefer area-weighted, if missing use mid-range
-        ela_mask = ela.isnull()
-        ela[ela_mask] = region['ELA_mid'][ela_mask]
-        ela_conv = ELA_CONV['ela_weighted']*numpy.ones(len(ela))
-        ela_conv[ela_mask] = ELA_CONV['ela_mid']
-        ela = ela + ela_conv
-        if ensemble:
-            ela_err = ERRS['ela_weighted']*numpy.ones(len(ela))
-            ela_err[ela_mask] = ERRS['ela_mid']
-            ela = scipy.stats.norm(loc=ela, scale=ela_err).rvs(size=len(ela))
+        P_0 = ((3 - 2*gamma)/(2 - gamma))*(unumpy.nominal_values(G[mask])*(gamma - 1)/(2*(2 - gamma)*(sqrt(unumpy.nominal_values(G[mask]) + 1) - 1)))**((gamma - 1)/(3 - 2*gamma))
 
-        zela = ela - (region['Zmax'] - heights)
-        zela_nd = zela/Ldim
-        P = zela_nd/(ca_nd**(1/gamma))
+        bif_dist = unumpy.uarray(numpy.zeros(len(region)), numpy.zeros(len(region)))
+        bif_dist[mask] = (P_0 - P[mask])*(slopes[mask]**(gamma - 1)/(2**(gamma - 1)*ca[mask]**((2 - gamma)/gamma)*cl[mask]**((2 - gamma)*(gamma - 1)/gamma)))**(1/(2*gamma - 3))
+        bif_dist[~mask] = numpy.nan
+        run_data.loc[(region_name,), 'bif_dist'] = unumpy.nominal_values(bif_dist)
 
-        run_data.loc[(region_name,), 'zela'] = zela.values
-        run_data.loc[(region_name,), 'P'] = P.values
+        diff = gamma*G[mask]*volumes_nd[mask]**((2*gamma + 1)/gamma)/(2*(gamma - 2)*(sqrt(G[mask] + 1) - 1)*volumes_nd[mask]**(3/gamma) + (gamma - 1)*G[mask]*volumes_nd[mask]**2)
 
-        bif_dist = P0_vec(G) - P
-        run_data.loc[(region_name,), 'bif_dist'] = (bif_dist*(zela/P)).values
+        sensitivity = unumpy.uarray(numpy.zeros(len(region)), numpy.zeros(len(region)))
+        sensitivity[mask] = Ldim[mask]**(3/gamma)/ca[mask]**(1/gamma)*diff
+        sensitivity[~mask] = numpy.nan
 
-        sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff_vec(G, P, volumes_nd)
+        volumes[~mask] = 0
+        volumes_nd[~mask] = 0
 
-        run_data.loc[(region_name,), 'sensitivity'] = sensitivity.values
+        run_data.loc[(region_name,), 'sensitivity'] = unumpy.nominal_values(sensitivity)
+        run_data.loc[(region_name,), 'sensitivity_std'] = unumpy.std_devs(sensitivity)
 
-        volumes_ss = final_volume_vec(G, P, volumes_nd)
+        volumes_ss = volumes
 
-        run_data.loc[(region_name,), 'volumes_ss'] = (volumes_ss*Ldim**3).values
+        run_data.loc[(region_name,), 'volumes_ss'] = unumpy.nominal_values(volumes_ss)
+        run_data.loc[(region_name,), 'volumes_ss_std'] = unumpy.std_devs(volumes_ss)
 
-        tau = -(1/20*G*P**2/volumes_ss**(4/5) - 1/5*G*P/volumes_ss**(3/5)
-                - 4/5*P/volumes_ss**(1/5) + 3/20*G/volumes_ss**(2/5) - 7/5*volumes_ss**(2/5)
-                + 1)**(-1)*g_abl**(-1)
+        tau = unumpy.uarray(numpy.zeros(len(region)), numpy.zeros(len(region)))
+        tau[mask] = -(1/20*G[mask]*P[mask]**2/volumes_nd[mask]**(4/5) - 1/5*G[mask]*P[mask]/volumes_nd[mask]**(3/5)
+                      - 4/5*P[mask]/volumes_nd[mask]**(1/5) + 3/20*G[mask]/volumes_nd[mask]**(2/5) - 7/5*volumes_nd[mask]**(2/5)
+                      + 1)**(-1)*g_abl[mask]**(-1)
+        tau[~mask] = numpy.nan
 
-        run_data.loc[(region_name,), 'tau'] = tau.values
+        run_data.loc[(region_name,), 'tau'] = unumpy.nominal_values(tau)
+        run_data.loc[(region_name,), 'tau_std'] = unumpy.std_devs(tau)
 
-    return run_data[['P', 'G', 'sensitivity', 'volumes_ss', 'tau', 'bif_dist']]
-
-
-def run_all(n_samples=100):
-    global iteration
-    global lock
-    iteration = multiprocessing.Value('i', 0)
-    lock = multiprocessing.Lock()
-    pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-    all_data = pool.map(run, range(n_samples))
-    pickle.dump(all_data, open('data/serialized/all_data', 'wb'))
+    return run_data[['P', 'G', 'sensitivity', 'sensitivity_std', 'tau', 'tau_std', 'volumes_ss',
+                     'volumes_ss_std', 'bif_dist']]
 
 
 def run_single():
-    single_data = run(0, ensemble=False)
+    single_data = run()
     pandas.to_pickle(single_data, 'data/serialized/single_data')

@@ -15,13 +15,9 @@ RGI_NAMES = RGI_NAMES[::-1]
 all_data = pickle.load(open('data/serialized/all_data', 'rb'))
 single_data = pandas.read_pickle('data/serialized/single_data')
 
-tau = [d['tau'] for d in all_data]
-rel = [t.groupby(level='Region').mean() for t in tau]
-concat = pandas.concat(rel, axis=1)
-# means = concat.mean(axis=1)
-stds = concat.std(axis=1)
+tau = [numpy.log(d['tau'][d['tau'] > 0]) for d in all_data]
 
-means_single = single_data.groupby(level='Region')['tau'].mean()
+means_single = numpy.exp(numpy.log(single_data['tau'][single_data['tau'] > 0]).groupby(level='Region').mean())
 
 indices = numpy.arange(19)
 
@@ -30,9 +26,7 @@ ax = plt.subplot(111)
 plt.plot(means_single[RGI_REGIONS], range(19), 'o', markerfacecolor='black',
          markeredgecolor='black', markersize=8)
 
-plt.hlines(indices, 0, 175, linestyles='dotted', linewidth=1.5)
-plt.hlines(indices, (means_single - stds)[RGI_REGIONS], (means_single + stds)[RGI_REGIONS],
-           linewidth=2.5)
+plt.hlines(indices, 0, means_single[RGI_REGIONS], linestyles='dotted', linewidth=1.5)
 
 # plt.yticks(range(19), RGI_NAMES, fontsize=20, horizontalalignment='left')
 plt.xticks(fontsize=18)
@@ -40,10 +34,10 @@ plt.xticks(fontsize=18)
 yax = ax.get_yaxis()
 yax.set_tick_params(left='off', labelleft='off')
 
-ax.set_xlim([0, 175])
+ax.set_xlim([0, 135])
 ax.set_ylim([-1, 19])
 
-plt.xlabel('Mean $e$-folding time (years)', fontsize=22)
+plt.xlabel('Geometric mean $e$-folding time (years)', fontsize=22)
 
 fig = plt.gcf()
 fig.set_size_inches(9, 7)

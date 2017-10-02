@@ -4,54 +4,60 @@ import sklearn
 import sklearn.neighbors
 from sklearn.linear_model import LinearRegression
 
-# Features to use in the accumulation and ablation gradient linear,
-# as determined by subset selection
+# Features to use in the ablation gradient and G regression, as determined by subset selection
 ABL_FEATURES = ['continentality', 'summer_temperature', 'lapse_rate']
-ACC_FEATURES = ['max_elevation', 'median_elevation', 'continentality']
+G_FEATURES = ['max_elevation', 'continentality', 'winter_precipitation', 'cloud_cover']
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
+glaciers['G'] = glaciers['g_acc']/glaciers['g_abl'] - 1
 all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 all_glaciers['max_elevation'] = all_glaciers['Zmax']
 
-# Remove negative ablation gradients, since the timescale cannot be
-# negative
-abl_mask = ~glaciers['g_abl'].isnull() & (glaciers['g_abl'] > 0)
-acc_mask = ~glaciers['g_acc'].isnull()
+# Remove null
+mask = ~glaciers['G'].isnull() & (glaciers['g_abl'] > 0)
 
-g_abl = glaciers[abl_mask]['g_abl']
-g_acc = glaciers[acc_mask]['g_acc']
+g_abl = glaciers[mask]['g_abl']
+G = glaciers[mask]['G']
 
-abl_feature_mask = ~glaciers[ABL_FEATURES].isnull().any(axis=1) & abl_mask
-acc_feature_mask = ~glaciers[ACC_FEATURES].isnull().any(axis=1) & acc_mask
+abl_feature_mask = ~glaciers[ABL_FEATURES].isnull().any(axis=1) & mask
+G_feature_mask = ~glaciers[G_FEATURES].isnull().any(axis=1) & mask
 
 abl_data = glaciers[abl_feature_mask][ABL_FEATURES]
-acc_data = glaciers[acc_feature_mask][ACC_FEATURES]
+G_data = glaciers[G_feature_mask][G_FEATURES]
 
 abl_mean = abl_data.mean()
 abl_std = abl_data.std()
 
-acc_mean = acc_data.mean()
-acc_std = acc_data.std()
+G_mean = G_data.mean()
+G_std = G_data.std()
 
 g_abl_features = (abl_data - abl_mean)/abl_std
-g_acc_features = (acc_data - acc_mean)/acc_std
+G_features = (G_data - G_mean)/G_std
 
 neighbours_abl = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
                                                        metric='haversine')
-neighbours_acc = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
-                                                       metric='haversine')
+neighbours_G = sklearn.neighbors.KNeighborsRegressor(n_neighbors=20, weights='distance',
+                                                     metric='haversine')
 
-neighbours_abl.fit(numpy.radians(glaciers[abl_mask][['lat', 'lon']]), g_abl)
-neighbours_acc.fit(numpy.radians(glaciers[acc_mask][['lat', 'lon']]), g_acc)
+neighbours_abl.fit(numpy.radians(glaciers[mask][['lat', 'lon']]), g_abl)
+neighbours_G.fit(numpy.radians(glaciers[mask][['lat', 'lon']]), G)
 
 model_abl = LinearRegression().fit(g_abl_features, glaciers[abl_feature_mask]['g_abl'])
-model_acc = LinearRegression().fit(g_acc_features, glaciers[acc_feature_mask]['g_acc'])
+model_G = LinearRegression().fit(G_features, glaciers[G_feature_mask]['G'])
 
 c = 0
 for glacier in all_glaciers.index:
     c += 1
     print(c/len(all_glaciers))
+
+    if all_glaciers.loc[glacier, G_FEATURES].isnull().any():
+        neighbour_G_res = neighbours_G.predict(numpy.radians(all_glaciers.loc[[glacier],
+                                                                              ['lat', 'lon']]))
+        G_res = neighbour_G_res
+    else:
+        lm_G_res = model_G.predict((all_glaciers.loc[[glacier], G_FEATURES] - G_mean)/G_std)
+        G_res = lm_G_res
 
     if all_glaciers.loc[glacier, ABL_FEATURES].isnull().any():
         neighbour_abl_res = neighbours_abl.predict(numpy.radians(all_glaciers.loc[[glacier],
@@ -62,16 +68,8 @@ for glacier in all_glaciers.index:
                                         - abl_mean)/abl_std)
         abl_res = lm_abl_res
 
-    if all_glaciers.loc[glacier, ACC_FEATURES].isnull().any():
-        neighbour_acc_res = neighbours_acc.predict(numpy.radians(all_glaciers.loc[[glacier],
-                                                                                  ['lat', 'lon']]))
-        acc_res = neighbour_acc_res
-    else:
-        lm_acc_res = model_acc.predict((all_glaciers.loc[[glacier], ACC_FEATURES]
-                                        - acc_mean)/acc_std)
-        acc_res = lm_acc_res
-
+    all_glaciers.loc[glacier, 'G'] = G_res
     all_glaciers.loc[glacier, 'g_abl'] = abl_res
-    all_glaciers.loc[glacier, 'g_acc'] = acc_res
+    all_glaciers.loc[glacier, 'g_acc'] = abl_res*(G_res + 1)
 
 all_glaciers.to_pickle('data/serialized/all_glaciers')

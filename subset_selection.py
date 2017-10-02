@@ -8,6 +8,7 @@ from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
+glaciers['G'] = glaciers['g_acc']/glaciers['g_abl'] - 1
 
 
 def power_set(iterable):
@@ -27,7 +28,7 @@ glaciers.loc[glaciers['lat'] > 55, 'region'] = 'high'
 
 for i in range(100):
     print(i)
-    for gradient in ['g_abl', 'g_acc']:
+    for gradient in ['g_abl', 'G']:
         # Timescale cannot be negative
         if gradient == 'g_abl':
             data = glaciers[glaciers[gradient] > 0]
@@ -66,7 +67,7 @@ for i in range(100):
 
 runs = pandas.DataFrame(runs)
 
-for gradient in ['g_abl', 'g_acc']:
+for gradient in ['g_abl', 'G']:
     subset = runs[runs['gradient'] == gradient]['subset'].value_counts().argmax()
 
     if gradient == 'g_abl':

@@ -48,19 +48,12 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
                  'centraleurope', 'caucasus', 'centralasiaN', 'centralasiaW', 'centralasiaS',
                  'lowlatitudes', 'southernandes', 'newzealand', 'antarctic']
 
-# The amount to adjust the median, area-weighted mean, or mid-range altitude to estimate the
-# balanced-budget ELA
-ELA_CONV = {'ela_mid': -27,  # Braithwaite & Raper, 2009
-            'ela_weighted': -36}  # Braithwaite, 2015
-
 ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 2012)
         'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
         'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
         'length_interp': 0.249,  # root-mean square relative error in interpolating length
         'g_abl': 0.003751,  # root-mean square error in interpolating g_abl
-        'g_acc': 0.002326,  # root-mean square error in interpolating g_acc
-        'ela_mid': 125,  # standard deviation of error distribution (Braithwaite & Raper, 2009)
-        'ela_weighted': 56}  # standard deviation of error distribution (Braithwaite, 2015)
+        'G': 0.2985}  # root-mean square error in interpolating G
 
 ICE_DENSITY = 917
 
@@ -91,6 +84,8 @@ def eq_volume(G, P):
 
 
 def final_volume(G, P, V):
+    if G < -1:
+        return numpy.float(0)
     eq_volumes = eq_volume(G, P)
     loc = eq_volumes.searchsorted(V)
     if loc == len(eq_volumes):
@@ -98,22 +93,21 @@ def final_volume(G, P, V):
         # volume, return the largest since the volume must be finite
         # and non-negative
         return eq_volumes[loc - 1]
-    lower, upper = (loc - 1, loc) if loc != 0 else (loc, loc + 1)
-    if equation.evaluate(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, 1, -1]), V) < 0:
-        return eq_volumes[lower]
     else:
-        return eq_volumes[upper]
-
-
-def stability(G, P, V):
-    terms = numpy.array([1/4*G*P**2*(1/gamma - 1/p), -1/4*G*(1/gamma + 1/p - 2),
-                         -(1/gamma + 1/p), 1/2*G*P*(1/p - 1), -P/gamma, 1])
-    if V == 0:
-        # As V -> 0, the term with the most negative exponent dominates
-        nonzero = numpy.nonzero(terms)
-        return numpy.sign(terms[nonzero][numpy.argmin(equation_diff.exponents[nonzero])])
-    else:
-        return numpy.sign(equation_diff.evaluate(terms, V))
+        if P <= 0:
+            return eq_volumes[1]
+        else:
+            if -2*V**((2 - gamma)/gamma) > (P - V**((gamma - 1)/gamma)):
+                # No ablation area
+                return eq_volumes[-1]
+            elif P - V**((gamma - 1)/gamma) > 0:
+                # No accumulation area
+                return eq_volumes[0]
+            else:
+                if equation.evaluate(numpy.array([1/4*G*P**2, -1/2*G*P, -P, 1/4*G, 1, -1]), V) < 0:
+                    return eq_volumes[0]
+                else:
+                    return eq_volumes[-1]
 
 
 def diff(G, P, V, dP=1e-8):

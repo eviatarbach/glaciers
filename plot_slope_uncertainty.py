@@ -25,11 +25,11 @@ for i, _ in enumerate(intervals[:-1]):
 c, r = scipy.optimize.curve_fit(lambda slope, c, r: c*slope**r, xdata=mid[~numpy.isnan(err)],
                                 ydata=err[~numpy.isnan(err)])[0]
 
-plt.scatter(mid, err)
+plt.scatter(numpy.log10(mid), err)
 
-slope = numpy.linspace(0, max(mid), 100)
-plt.plot(slope, c*slope**r)
-plt.xlabel(r'tan${}^{-1}\beta_H$', fontsize=18)
+slope = numpy.linspace(mid[(~numpy.isnan(err)).nonzero()[0][0]], max(mid), 100)
+plt.plot(numpy.log10(slope), c*slope**r)
+plt.xlabel(r'$\text{log}_{10}(\text{tan}^{-1}(\beta_H))$', fontsize=18)
 plt.ylabel('RMSE', fontsize=18, rotation=0, labelpad=45)
 ax = plt.gca()
 ax.spines["top"].set_visible(False)

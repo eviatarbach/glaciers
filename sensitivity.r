@@ -45,15 +45,15 @@ HSIC_sens <- function(n_samples=500){
 HSIC_tau <- function(n_samples=500){
   X <- sample_tau(n_samples)
   Y <- tau_glacier(X)
-  m <- Y != 0
+  m <- Y > 0
   res <- sensiHSIC(X=X[m,], nboot=10)
   write.table(tell(res, y=log(Y[m]))$S, "data/HSIC_tau.txt", sep=",")
 }
 
 pairwise_HSIC <- function(n_samples=1000){
   X <- sample_all(n_samples)
-  pairs <- combn(1:8, 2)
-  HSIC_mat <- matrix(0, nrow=8, ncol=8)
+  pairs <- combn(1:6, 2)
+  HSIC_mat <- matrix(0, nrow=6, ncol=6)
   for(i in 1:dim(pairs)[2]){
     HSIC_mat[pairs[1, i], pairs[2, i]] <- tell(sensiHSIC(X=X[, c(pairs[1, i], pairs[1, i])]),
                                                y=X[, pairs[2, i]])$S$original[1]
