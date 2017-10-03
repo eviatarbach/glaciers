@@ -7,15 +7,15 @@ The code is for computing response times and sensitivity to equilibrium line alt
 All the code was written by Eviatar Bach. Licensed under the GNU Public License v3.0.
 
 Libraries used:
-- NumPy
-- pandas
-- geopandas
-- matplotlib
-- scipy
-- uncertainties
-- scikit-learn
-- netcdf4-python
-- sensitivity
+- [NumPy](http://www.numpy.org/)
+- [pandas](http://pandas.pydata.org/)
+- [geopandas](http://geopandas.org/)
+- [Matplotlib](https://matplotlib.org/)
+- [SciPy](https://scipy.org/scipylib/index.html)
+- [uncertainties](https://pythonhosted.org/uncertainties/)
+- [scikit-learn](http://scikit-learn.org/stable/)
+- [netcdf4-python](http://unidata.github.io/netcdf4-python/)
+- [sensitivity](https://cran.r-project.org/web/packages/sensitivity/index.html)
 
 Description of files:
 - **data.py**: contains various constants, including the scaling constant, uncertainty values for different parameters, and functions for computing equilibrium volumes
