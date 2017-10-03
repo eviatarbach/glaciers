@@ -16,3 +16,8 @@ Libraries used:
 - scikit-learn
 - netcdf4-python
 - sensitivity
+
+Description of files:
+- **data.py**: contains various constants, including the scaling constant, uncertainty values for different parameters, and functions for computing equilibrium volumes
+- **interpolate_missing.py**: interpolates volumes and lengths for glaciers that are missing them. Notably, these are interpolated for all the glaciers in Alaska and Southern Andes, due to a mismatch in numbering between the Randolph Glacier Inventory 5.0 and the Huss & Farinotti data 
+- **load_climate.py**:
