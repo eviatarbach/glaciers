@@ -15,6 +15,7 @@ Libraries used:
 - [uncertainties](https://pythonhosted.org/uncertainties/)
 - [scikit-learn](http://scikit-learn.org/stable/)
 - [netcdf4-python](http://unidata.github.io/netcdf4-python/)
+- [rPython](https://cran.r-project.org/web/packages/rPython/index.html)
 - [sensitivity](https://cran.r-project.org/web/packages/sensitivity/index.html)
 
 Description of files:
