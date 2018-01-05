@@ -35,10 +35,10 @@ tau_HSIC = pandas.read_table('data/HSIC_tau.txt', sep=',')
 ax = plt.subplot(111)
 plt.plot(tau_HSIC['original'] - tau_HSIC['bias'], range(6), 'o', markerfacecolor='black',
          markeredgecolor='black', markersize=8)
-plt.hlines(range(6), 0, 0.4, linestyles='dotted', linewidth=1.5)
+plt.hlines(range(6), 0, 0.45, linestyles='dotted', linewidth=1.5)
 plt.hlines(range(6), tau_HSIC['min. c.i.'], tau_HSIC['max. c.i.'], linewidth=2.5)
 
-ax.set_xlim([0, 0.4])
+ax.set_xlim([0, 0.45])
 ax.set_ylim([-1, 6])
 
 plt.yticks(range(6), [r'$G^*$', r'$\dot{g}_\text{abl}$', 'log $c_a$', 'log $c_l$',

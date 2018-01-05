@@ -22,18 +22,16 @@ features = ['max_elevation', 'median_elevation', 'continentality', 'summer_tempe
 
 runs = []
 
-glaciers.loc[glaciers['lat'] < 25, 'region'] = 'low'
-glaciers.loc[(glaciers['lat'] >= 25) & (glaciers['lat'] <= 55), 'region'] = 'mid'
-glaciers.loc[glaciers['lat'] > 55, 'region'] = 'high'
+glaciers_train, glaciers_test = sklearn.model_selection.train_test_split(glaciers, test_size=0.20)
 
 for i in range(100):
     print(i)
     for gradient in ['g_abl', 'G']:
         # Timescale cannot be negative
         if gradient == 'g_abl':
-            data = glaciers[glaciers[gradient] > 0]
+            data = glaciers_train[glaciers_train[gradient] > 0]
         else:
-            data = glaciers[glaciers[gradient].notnull()]
+            data = glaciers_train[glaciers_train[gradient].notnull()]
 
         cv_list = []
 
@@ -42,22 +40,18 @@ for i in range(100):
         X = data[features]
         y = data[gradient]
         X_norm = (X - X.mean())/(X.std())
-        X_val, X_test, y_val, y_test = sklearn.model_selection.train_test_split(X_norm, y,
-                                                                                test_size=0.05)
 
         for subset in list(power_set(features))[1:]:
             subset_err = []
-            not_null_indices = X_val[list(subset)].notnull().all(axis=1)
-            X_val_subset = X_val[list(subset)][not_null_indices]
-            y_val_subset = y_val[not_null_indices]
-            skf = sklearn.model_selection.StratifiedKFold(n_splits=3)
-            for train_index, test_index in skf.split(X_val_subset,
-                                                     glaciers.loc[not_null_indices.index,
-                                                                  'region'][not_null_indices]):
-                model = LinearRegression().fit(X_val_subset.iloc[train_index],
-                                               y_val_subset.iloc[train_index])
-                error = numpy.mean((model.predict(X_val_subset.iloc[test_index])
-                                    - y_val_subset.iloc[test_index])**2)
+            not_null_indices = X_norm[list(subset)].notnull().all(axis=1)
+            X_subset = X_norm[list(subset)][not_null_indices]
+            y_subset = y[not_null_indices]
+            skf = sklearn.model_selection.KFold(n_splits=6)
+            for train_index, test_index in skf.split(X_subset, y_subset):
+                model = LinearRegression().fit(X_subset.iloc[train_index],
+                                               y_subset.iloc[train_index])
+                error = numpy.mean((model.predict(X_subset.iloc[test_index])
+                                    - y_subset.iloc[test_index])**2)
                 subset_err.append(error)
             cv_list.append({'subset': subset, 'err': numpy.mean(subset_err)})
 
@@ -71,9 +65,9 @@ for gradient in ['g_abl', 'G']:
     subset = runs[runs['gradient'] == gradient]['subset'].value_counts().argmax()
 
     if gradient == 'g_abl':
-        data = glaciers[glaciers[gradient] > 0]
+        data = glaciers_test[glaciers_test[gradient] > 0]
     else:
-        data = glaciers[glaciers[gradient].notnull()]
+        data = glaciers_test[glaciers_test[gradient].notnull()]
 
     X = data[list(subset)]
     y = data[gradient]
@@ -88,7 +82,7 @@ for gradient in ['g_abl', 'G']:
     plt.hist(error, bins=15)
     plt.show()
 
-    kf = sklearn.model_selection.KFold(n_splits=20)
+    kf = sklearn.model_selection.LeaveOneOut()
     subset_err = []
     for train_index, test_index in kf.split(X_nn, y_nn):
         model = LinearRegression().fit(X_nn.iloc[train_index], y_nn.iloc[train_index])

@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 
 # Features to use in the ablation gradient and G regression, as determined by subset selection
 ABL_FEATURES = ['continentality', 'summer_temperature', 'lapse_rate']
-G_FEATURES = ['max_elevation', 'continentality', 'winter_precipitation', 'cloud_cover']
+G_FEATURES = ['max_elevation', 'continentality', 'cloud_cover']
 
 glaciers = pandas.read_pickle('data/serialized/glaciers_climate')
 glaciers['G'] = glaciers['g_acc']/glaciers['g_abl'] - 1
