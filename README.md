@@ -1,6 +1,6 @@
 # Code for "How sensitive are mountain glaciers to climate change? Insights from a block model"
 
-This repository contains the code for the paper "How sensitive are mountain glaciers to climate change? Insights from a block model" by Eviatar Bach, Valentina Radić, and Christian Schoof, 2017, to be published in the *Journal of Glaciology*.
+This repository contains the code for the paper "How sensitive are mountain glaciers to climate change? Insights from a block model" by Eviatar Bach, Valentina Radić, and Christian Schoof, 2018, to be published in the *Journal of Glaciology*.
 
 The code is for computing response times and sensitivity to equilibrium line altitude (ELA) changes for mountain glaciers worldwide, using a block model with volume–area–length scaling and a piecewise linear mass balance profile.
 
@@ -15,9 +15,10 @@ Libraries used:
 - [uncertainties](https://pythonhosted.org/uncertainties/)
 - [scikit-learn](http://scikit-learn.org/stable/)
 - [netcdf4-python](http://unidata.github.io/netcdf4-python/)
-- [rPython](https://cran.r-project.org/web/packages/rPython/index.html)
 - [sensitivity](https://cran.r-project.org/web/packages/sensitivity/index.html)
 - [mpl-scatter-density](https://github.com/astrofrog/mpl-scatter-density)
+- [astropy](http://www.astropy.org/)
+- [rpy2](https://rpy2.bitbucket.io/)
 
 Description of files:
 - **data.py**: contains various constants, including the scaling constant, uncertainty values for different parameters, and functions for computing equilibrium volumes
