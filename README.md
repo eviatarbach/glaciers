@@ -17,6 +17,7 @@ Libraries used:
 - [netcdf4-python](http://unidata.github.io/netcdf4-python/)
 - [rPython](https://cran.r-project.org/web/packages/rPython/index.html)
 - [sensitivity](https://cran.r-project.org/web/packages/sensitivity/index.html)
+- [mpl-scatter-density](https://github.com/astrofrog/mpl-scatter-density)
 
 Description of files:
 - **data.py**: contains various constants, including the scaling constant, uncertainty values for different parameters, and functions for computing equilibrium volumes
