@@ -7,8 +7,12 @@ all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
 
+lengths = (all_glaciers['Zmax'] - all_glaciers['Zmin'] - all_glaciers['THICK_mean'])/all_glaciers['SLOPE_avg']
+all_glaciers = all_glaciers[lengths > 0]
+lengths = lengths[lengths > 0]
+
 G = all_glaciers['G']
-cl = all_glaciers['volume']/all_glaciers['Lmax']**p
+cl = all_glaciers['volume']/lengths**p
 ca = all_glaciers['volume']/all_glaciers['area']**gamma
 
 dat_sens = numpy.vstack([G, numpy.log(ca), numpy.log(cl), numpy.arctan(all_glaciers['SLOPE_avg']),
@@ -56,7 +60,7 @@ def sens_glacier(param_vals):
     sensitivity = Ldim**(3/gamma)/ca**(1/gamma)*diff
     sensitivity[volumes_nd < V_0] = 0
     sensitivity[numpy.isnan(sensitivity)] = 0
-    return sensitivity.tolist()
+    return sensitivity
 
 
 def tau_glacier(param_vals):
@@ -78,19 +82,42 @@ def tau_glacier(param_vals):
             + 1)**(-1)*g_abl**(-1)
     tau[volumes_nd < V_0] = 0
     tau[numpy.isnan(tau)] = 0
-    return tau.tolist()
+    return tau
+
+
+def bif_dist_glacier(param_vals):
+    param_vals = pandas.DataFrame(param_vals).values
+    param_vals = param_vals*sens_stds + sens_means
+    G = param_vals[:, 0]
+    ca = numpy.exp(param_vals[:, 1])
+    cl = numpy.exp(param_vals[:, 2])
+    slopes = numpy.tan(param_vals[:, 3])
+    volumes = numpy.exp(param_vals[:, 4])
+    Ldim = (2*ca**(1/gamma)*cl**(1/p)/slopes)**(gamma*p/(3*(gamma + p - gamma*p)))
+    volumes_nd = volumes/Ldim**3
+    P = (-2*volumes_nd**(3/gamma)*(numpy.sqrt(G + 1) - 1) + G*volumes_nd**2)/(G*volumes_nd**((1 + gamma)/gamma))
+    P_0 = ((3 - 2*gamma)/(2 - gamma))*(G*(gamma - 1)/(2*(2 - gamma)*(numpy.sqrt(G + 1) - 1)))**((gamma - 1)/(3 - 2*gamma))
+    conversion = (slopes**(gamma - 1)/(2**(gamma - 1)*ca**((2 - gamma)/gamma)*cl**((2 - gamma)*(gamma - 1)/gamma)))**(1/(2*gamma - 3))
+    bif_dist = (P_0 - P)*conversion
+    bif_dist[numpy.isnan(bif_dist)] = 0
+    return bif_dist
 
 
 def sample_joint_sens(n):
-    samples = dat_sens[numpy.random.choice(dat_sens.shape[0], n), :].tolist()
+    samples = dat_sens[numpy.random.choice(dat_sens.shape[0], n), :]
     return samples
 
 
 def sample_joint_tau(n):
-    samples = dat_tau[numpy.random.choice(dat_tau.shape[0], n), :].tolist()
+    samples = dat_tau[numpy.random.choice(dat_tau.shape[0], n), :]
+    return samples
+
+
+def sample_joint_bif_dist(n):
+    samples = dat_sens[numpy.random.choice(dat_sens.shape[0], n), :]
     return samples
 
 
 def sample_joint_all(n):
-    samples = dat_all[numpy.random.choice(dat_all.shape[0], n), :].tolist()
+    samples = dat_all[numpy.random.choice(dat_all.shape[0], n), :]
     return samples

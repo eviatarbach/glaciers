@@ -50,8 +50,7 @@ THICK_REGIONS = ['alaska', 'westerncanada', 'arcticcanadaN', 'arcticcanadaS', 'g
 
 ERRS = {'height': 0.3,  # estimated relative error in height (Huss & Farinotti, 2012)
         'length': 0.2,  # estimated relative error in length (Machguth & Huss, 2014)
-        'vol_interp': 0.223,  # root-mean square relative error in interpolating volume
-        'length_interp': 0.249,  # root-mean square relative error in interpolating length
+        'vol_interp': 0.219,  # root-mean square relative error in interpolating volume
         'g_abl': 0.002848,  # root-mean square error in interpolating g_abl
         'G': 0.3216}  # root-mean square error in interpolating G
 

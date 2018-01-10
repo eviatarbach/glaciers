@@ -36,13 +36,9 @@ def run():
         volumes[interp_volume_mask] = unumpy.uarray(region['volume'][interp_volume_mask],
                                                     ERRS['vol_interp']*region['volume'][interp_volume_mask])
 
-        lengths = (region['Zmax'] - region['Zmin'] - unumpy.nominal_values(heights))/unumpy.nominal_values(slopes)  # unumpy.uarray(region['Lmax'], ERRS['length']*region['Lmax'])
+        lengths = (region['Zmax'] - region['Zmin'] - unumpy.nominal_values(heights))/unumpy.nominal_values(slopes)
         lengths[lengths <= 0] = numpy.nan
         lengths = unumpy.uarray(lengths, ERRS['length']*lengths)
-
-        # interp_length_mask = region['interp_length']
-        # lengths[interp_length_mask] = unumpy.uarray(region['Lmax'][interp_length_mask],
-        #                                             ERRS['length_interp']*region['Lmax'][interp_length_mask])
 
         g_abl = unumpy.uarray(region['g_abl'].values, ERRS['g_abl'])
         G = unumpy.uarray(region['G'].values, ERRS['G'])
@@ -82,7 +78,6 @@ def run():
 
         sensitivity = unumpy.uarray(numpy.zeros(len(region)), numpy.zeros(len(region)))
         sensitivity[mask] = Ldim[mask]**3/conversion*diff
-        # sensitivity[mask] = Ldim[mask]**(3/gamma)/ca[mask]**(1/gamma)*diff
         sensitivity[~mask] = numpy.nan
 
         volumes[~mask] = 0

@@ -1,6 +1,7 @@
 import pandas
 import numpy
 import scipy.stats
+from sklearn.model_selection import train_test_split
 
 from data import RGI_REGIONS
 
@@ -17,13 +18,18 @@ volumes = all_glaciers.loc[RGI_REGIONS2]['volume']
 
 mask = ~numpy.isnan(areas) & ~numpy.isnan(volumes)
 
-line = scipy.stats.linregress(numpy.log(areas)[mask], numpy.log(volumes)[mask])
+volumes_train, volumes_test, areas_train, areas_test = train_test_split(volumes[mask],
+                                                                        areas[mask],
+                                                                        test_size=0.10)
+
+line_train = scipy.stats.linregress(numpy.log(areas_train), numpy.log(volumes_train))
 
 # Calculate relative error in prediction
-volumes_pred = numpy.exp(line.intercept)*areas**(line.slope)
-relative_error = numpy.sqrt(numpy.mean(((volumes_pred - volumes)/volumes_pred)**2))
+volumes_pred = numpy.exp(line_train.intercept)*areas_test**(line_train.slope)
+relative_error = numpy.sqrt(numpy.mean(((volumes_pred - volumes_test)/volumes_pred)**2))
 print(relative_error)
 
+line = scipy.stats.linregress(numpy.log(areas[mask]), numpy.log(volumes[mask]))
 volumes_interp = numpy.exp(line.intercept)*all_glaciers.loc[MISSING_REGIONS]['Area']**(line.slope)
 all_glaciers.loc[MISSING_REGIONS, 'volume'] = volumes_interp.values
 
@@ -36,27 +42,6 @@ all_glaciers.loc[missing_mask, 'volume'] = numpy.exp(line.intercept)*areas_missi
 all_glaciers['interp_volume'] = False
 all_glaciers.loc[MISSING_REGIONS, 'interp_volume'] = True
 all_glaciers.loc[missing_mask, 'interp_volume'] = True
-
-# Interpolate lengths
-lengths = all_glaciers.loc[RGI_REGIONS2]['Lmax']
-
-mask = ~numpy.isnan(areas) & ~numpy.isnan(lengths)
-
-line = scipy.stats.linregress(numpy.log(areas)[mask], numpy.log(lengths)[mask])
-
-# Calculate relative error in prediction
-lengths_pred = numpy.exp(line.intercept)*areas**(line.slope)
-relative_error = numpy.sqrt(numpy.mean(((lengths_pred - lengths)/lengths_pred)**2))
-print(relative_error)
-
-# Interpolate missing lengths
-missing_mask = all_glaciers['Lmax'].isnull()
-areas_missing = all_glaciers.loc[missing_mask, 'Area']
-all_glaciers.loc[missing_mask, 'Lmax'] = numpy.exp(line.intercept)*areas_missing**(line.slope)
-
-# Mark all glaciers that had their volumes interpolated
-all_glaciers['interp_length'] = False
-all_glaciers.loc[missing_mask, 'interp_length'] = True
 
 # Set quantities for mismatched regions to the RGI quantities
 all_glaciers.loc[MISSING_REGIONS, 'area'] = all_glaciers['Area']
