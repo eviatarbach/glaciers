@@ -6,41 +6,15 @@ import geopandas
 
 from data import RGI_REGIONS, THICK_REGIONS
 
-
-def median_elev(hypso, elevs):
-    """
-    Find the altitude of median hypsometry (the altitude at which the
-    sum of the area bands is half of the total). Since the area bands
-    are discrete, linear interpolation is used to approximate the
-    altitude.
-    """
-    cumsum = numpy.cumsum(hypso, axis=1)
-
-    # The sum of the area bands is normalized to 1000, so the median
-    # altitude is the altitude at which the sum of the bands below it
-    # is 500.
-
-    # Indices that straddle the median
-    i_upper = numpy.apply_along_axis(lambda a: a.searchsorted(500), axis=1, arr=cumsum)
-    i_lower = i_upper - 1
-
-    cumsum_lower = cumsum.values[numpy.arange(len(cumsum)), i_lower]
-    cumsum_upper = cumsum.values[numpy.arange(len(cumsum)), i_upper]
-
-    # Linear interpolation to approximate median elevation: set median
-    # elevation such that
-    # (hypso_median - hypso_lower)/(hypso_upper - hypso_lower)
-    # = (elev_median - elev_lower)/(elev_upper - elev_lower). The
-    # hypsometry format guarantees that elev_upper - elev_lower = 50
-    # and hypso_median = 500.
-    return elevs[i_lower] + (50*(500 - cumsum_lower)/(cumsum_upper - cumsum_lower))
-
-
 thickness_regex = re.compile('^(\d+);' + '\s+([-.0-9]+)'*18 + ';\s+(\d+)\s+(.+)$',
                              flags=re.MULTILINE)
 
 all_regions = []
 
+total_num = []
+total_area = []
+included_num = []
+included_area = []
 for i, region in enumerate(RGI_REGIONS):
     region_id = str(i + 1).zfill(2)
     with open('data/thick/thick_{name}_0.00_999.00.dat'.format(name=THICK_REGIONS[i]),
@@ -91,15 +65,6 @@ for i, region in enumerate(RGI_REGIONS):
         altitudes = numpy.float64(hypso_data.columns[2:])
         areas = hypso_data[hypso_data.columns[2:]]
 
-        # area-weighted mean altitude
-        region_data['ELA_weighted'] = (altitudes*areas/1000).sum(axis=1)
-
-        # median altitude
-        region_data['median_elevation'] = median_elev(areas, altitudes)
-
-        # mid-range altitude
-        region_data['ELA_mid'] = (region_data['Zmax'] + region_data['Zmin'])/2
-
         # replace invalid values with NaN
         region_data['volume'] = region_data['volume'].replace(0, numpy.nan)
         region_data['THICK_mean'] = region_data['THICK_mean'].replace(0, numpy.nan)
@@ -108,8 +73,6 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['Slope'] = region_data['Slope'].replace(0, numpy.nan)
         region_data['Slope'] = region_data['Slope'].replace(-9, numpy.nan)
         region_data['Lmax'] = region_data['Lmax'].replace(-9, numpy.nan)
-        region_data['median_elevation'] = region_data['median_elevation'].replace(-numpy.inf,
-                                                                                  numpy.nan)
 
         # unit conversion
 
@@ -123,9 +86,15 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['volume'] *= 1000**3
         region_data['LENGTH'] *= 1000
 
+        # lengths
+        region_data['length'] = (region_data['Zmax'] - region_data['Zmin']
+                                 - region_data['THICK_mean'])/region_data['SLOPE_avg']
+
         print(region)
         print('Total number in RGI:', len(region_data))
         print('Total area in RGI (km^2):', region_data['Area'].sum()/1000**2)
+        total_num.append(len(region_data))
+        total_area.append(region_data['Area'].sum()/1000**2)
 
         # restrict to glacier type
         region_data = region_data[(region_data['GlacType'].str[0] == '0')
@@ -139,8 +108,14 @@ for i, region in enumerate(RGI_REGIONS):
         region_data = region_data[~region_data['SLOPE_avg'].isnull()
                                   | ~region_data['Slope'].isnull()]
 
+        # drop glaciers with altitude range smaller than thickness
+        region_data = region_data[region_data['Zmax']
+                                  - region_data['Zmin'] > region_data['THICK_mean']]
+
         print('Total number included:', len(region_data))
         print('Total area included (km^2):', region_data['Area'].sum()/1000**2)
+        included_num.append(len(region_data))
+        included_area.append(region_data['Area'].sum()/1000**2)
 
         region_data = region_data.reset_index()
         region_data = region_data.set_index(['Region', 'RGIId'])

@@ -16,7 +16,7 @@ for region in RGI_REGIONS:
     bif_dist = single_data.loc[region]['bif_dist']
     vols = single_data.loc[region]['volumes_ss']
     mask = vols > 0
-    bif_dists.append(sum(vols[mask]*bif_dist[mask])/sum(vols))
+    bif_dists.append(sum(vols[mask]*bif_dist[mask])/sum(vols[mask]))
 bif_dists = numpy.array(bif_dists)
 
 indices = numpy.arange(19)

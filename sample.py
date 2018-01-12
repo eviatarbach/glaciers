@@ -7,12 +7,8 @@ all_glaciers = pandas.read_pickle('data/serialized/all_glaciers')
 
 all_glaciers = all_glaciers.replace(-numpy.inf, numpy.nan)
 
-lengths = (all_glaciers['Zmax'] - all_glaciers['Zmin'] - all_glaciers['THICK_mean'])/all_glaciers['SLOPE_avg']
-all_glaciers = all_glaciers[lengths > 0]
-lengths = lengths[lengths > 0]
-
 G = all_glaciers['G']
-cl = all_glaciers['volume']/lengths**p
+cl = all_glaciers['volume']/all_glaciers['length']**p
 ca = all_glaciers['volume']/all_glaciers['area']**gamma
 
 dat_all = pandas.concat([G, all_glaciers['g_abl'], numpy.log(ca), numpy.log(cl),

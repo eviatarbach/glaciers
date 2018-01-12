@@ -40,7 +40,7 @@ plt.plot(means[::-1], range(19), 'o-', markerfacecolor='black', markeredgecolor=
          markersize=8)
 
 plt.hlines(indices, 0, means[::-1], linestyles='dotted', linewidth=1.5)
-# plt.hlines(indices, (means - stds)[::-1], (means + stds)[::-1], linewidth=2.5)
+plt.hlines(indices, (means - stds)[::-1], (means + stds)[::-1], linewidth=2.5)
 
 plt.yticks(range(19), RGI_NAMES[::-1], fontsize=20, horizontalalignment='left')
 plt.xticks(fontsize=18)
