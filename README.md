@@ -22,5 +22,25 @@ Libraries used:
 
 Description of files:
 - **data.py**: contains various constants, including the scaling constant, uncertainty values for different parameters, and functions for computing equilibrium volumes
+- **hsic.py**: contains the functions for calling the R library `sensitivity` to compute the Hilbert--Schmidt independence criterion
 - **interpolate_missing.py**: interpolates volumes and lengths for glaciers that are missing them. Notably, these are interpolated for all the glaciers in Alaska and Southern Andes, due to a mismatch in numbering between the Randolph Glacier Inventory 5.0 and the Huss & Farinotti data 
-- **load_climate.py**:
+- **load_climate.py**: load climate data to be used for estimating mass-balance gradients
+- **load_data.py**: calls all the other data-loading scripts. Running this will load and serialize all the data necessary for running the model.
+- **load_geometry.py**: load geometry data from the RGI and Matthias Huss's thickness estimates
+- **load_gradients.py**: estimates mass-balance gradients for all glaciers in the data set. The variables used in the regression are specified at the top of the file, and were selected using `subset_selection.py`.
+- **load_mass_balance.py**: estimate mass-balance gradients for glaciers that have mass-balance data provided by WGMS
+- **plot_HSIC.py**: generates Figure 6 in the paper
+- **plot_bifurcation_2D.py**: generates Figures 3 (center) and 3 (right) in the paper
+- **plot_bifurcation_3D.py**: generates Figure 3 (left) in the paper
+- **plot_config.py**: sets plot font configuration. If you do not have the Optima font, comment out line 15.
+- **plot_curves.py**: generates Figure 2 in the paper
+- **plot_density.py**: generates Figure 5 in the paper
+- **plot_sensitivity.py**: generates Figure 4 (left) in the paper
+- **plot_slope_uncertainty.py**: generates Figure 7 in the paper
+- **plot_tau.py**: generates Figure 4 (right) in the paper
+- **regional_diff.py**: calculates the correlations between regional mean quantities and the regional sensitivities and response times
+- **roots.py**: functions for finding equilibrium values of the model
+- **sample.py**: sampling functions for use with the HSIC analysis
+- **sensitivity_climate.py**: compute the sensitivities and response times for all glaciers in the data set
+- **subset_selection.py**: finds the set of variables to use for predicting mass-balance gradients
+- **verify_derivation.nb**: a Mathematica notebook for verifying the derivation of the nondimensionalized equation
