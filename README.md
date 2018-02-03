@@ -18,6 +18,13 @@ The easiest way to install the dependencies is with [conda](https://conda.io/doc
 That's it! Now you can run any of the files in the repository (see *Description of files* below). The serialized data files are included, so you do not have to run the `load_*.py` files. If you want to, see below.
 
 ## Data sources
+Except for the glacier thickness estimates, the other data must be downloaded and extracted as described to allow the data loading to work.
+
+* Glacier thickness estimates kindly provided by Matthias Huss (in `data/thick`), based on [Huss & Farinotti 2012](http://doi.org/10.1029/2012JF002523)
+* [Randolph Glacier Inventory 5.0](https://www.glims.org/RGI/rgi50_files/rgi50.zip) (extract the top directory and the sub-archives into `data`)
+* [Fluctuations of Glaciers Database](http://wgms.ch/downloads/DOI-WGMS-FoG-2017-06.zip) (extract into `data/DOI-WGMS-FoG-2017-06`)
+* [CRU TS v. 3.22](https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_3.23/cruts.1506241137.v3.23/) (extract [`cld`](https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_3.23/cruts.1506241137.v3.23/cld/cru_ts3.23.1901.2014.cld.dat.nc.gz), [`pre`](https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_3.23/cruts.1506241137.v3.23/pre/cru_ts3.23.1901.2014.pre.dat.nc.gz), and [`tmp`](https://crudata.uea.ac.uk/cru/data/hrg/cru_ts_3.23/cruts.1506241137.v3.23/tmp/cru_ts3.23.1901.2014.tmp.dat.nc.gz) into `data`)
+* [NCEP/NCAR Reanalysis](https://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.derived.pressure.html) (download [monthly air temperature](ftp://ftp.cdc.noaa.gov/Datasets/ncep.reanalysis.derived/pressure/air.mon.mean.nc) and [monthly geopotential height](ftp://ftp.cdc.noaa.gov/Datasets/ncep.reanalysis.derived/pressure/hgt.mon.mean.nc) into `data`)
 
 
 ## Libraries used
@@ -40,7 +47,7 @@ That's it! Now you can run any of the files in the repository (see *Description 
 - **hsic.py**: contains the functions for calling the R library `sensitivity` to compute the Hilbert--Schmidt independence criterion
 - **interpolate_missing.py**: interpolates volumes and lengths for glaciers that are missing them. Notably, these are interpolated for all the glaciers in Alaska and Southern Andes, due to a mismatch in numbering between the Randolph Glacier Inventory 5.0 and the Huss & Farinotti data 
 - **load_climate.py**: load climate data to be used for estimating mass-balance gradients
-- **load_data.py**: calls all the other data-loading scripts. Running this will load and serialize all the data necessary for running the model.
+- **load_data.py**: calls all the other data-loading scripts in the correct order. Running this will load and serialize all the data necessary for running the model.
 - **load_geometry.py**: load geometry data from the RGI and Matthias Huss's thickness estimates
 - **load_gradients.py**: estimates mass-balance gradients for all glaciers in the data set. The variables used in the regression are specified at the top of the file, and were selected using `subset_selection.py`.
 - **load_mass_balance.py**: estimate mass-balance gradients for glaciers that have mass-balance data provided by WGMS
