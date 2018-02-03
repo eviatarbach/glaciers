@@ -6,7 +6,21 @@ The code is for computing response times and sensitivity to equilibrium line alt
 
 All the code was written by Eviatar Bach. Licensed under the GNU Public License v3.0.
 
-Libraries used:
+You can contact me with any questions at eviatarbach@protonmail.com.
+
+## Setup instructions
+The easiest way to install the dependencies is with [conda](https://conda.io/docs/). After installing that and cloning this repository, the following instructions should get you a working local installation of the project.
+
+1. Install the dependencies using the conda environment: `conda env create -f environment.yml`
+2. Switch into the project environment: `source activate glaciers`
+3. You will need to install the R sensitivity package, since it is not installed with the conda environment. In either the command-line interface `R` or in RStudio, run `install.packages("sensitivity")`. This will download and compile the package.
+
+That's it! Now you can run any of the files in the repository (see *Description of files* below). The serialized data files are included, so you do not have to run the `load_*.py` files. If you want to, see below.
+
+## Data sources
+
+
+## Libraries used
 - [NumPy](http://www.numpy.org/)
 - [pandas](http://pandas.pydata.org/)
 - [geopandas](http://geopandas.org/)
@@ -20,8 +34,9 @@ Libraries used:
 - [astropy](http://www.astropy.org/)
 - [rpy2](https://rpy2.bitbucket.io/)
 
-Description of files:
+## Description of files
 - **data.py**: contains various constants, including the scaling constant, uncertainty values for different parameters, and functions for computing equilibrium volumes
+- **environment.yml**: conda environment for the project
 - **hsic.py**: contains the functions for calling the R library `sensitivity` to compute the Hilbert--Schmidt independence criterion
 - **interpolate_missing.py**: interpolates volumes and lengths for glaciers that are missing them. Notably, these are interpolated for all the glaciers in Alaska and Southern Andes, due to a mismatch in numbering between the Randolph Glacier Inventory 5.0 and the Huss & Farinotti data 
 - **load_climate.py**: load climate data to be used for estimating mass-balance gradients
