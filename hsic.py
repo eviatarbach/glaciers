@@ -14,7 +14,7 @@ rpy2.robjects.pandas2ri.activate()
 sensitivity = importr('sensitivity')
 
 
-def HSIC_sens(n_samples=500):
+def HSIC_sens(n_samples=1000):
     X = sample.sample_all(n_samples)
     Y = sample.sens_glacier(X)
     mask = Y != 0
@@ -23,7 +23,7 @@ def HSIC_sens(n_samples=500):
     rpy2.robjects.pandas2ri.ri2py(S).to_csv('data/HSIC_sens.txt')
 
 
-def HSIC_tau(n_samples=500):
+def HSIC_tau(n_samples=1000):
     X = sample.sample_all(n_samples)
     Y = sample.tau_glacier(X)
     mask = Y > 0
@@ -32,7 +32,7 @@ def HSIC_tau(n_samples=500):
     rpy2.robjects.pandas2ri.ri2py(S).to_csv('data/HSIC_tau.txt')
 
 
-def HSIC_bif_dist(n_samples=500):
+def HSIC_bif_dist(n_samples=1000):
     X = sample.sample_all(n_samples)
     Y = sample.bif_dist_glacier(X)
     mask = Y > 0

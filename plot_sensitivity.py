@@ -40,18 +40,20 @@ plt.plot(means[::-1], range(19), 'o-', markerfacecolor='black', markeredgecolor=
          markersize=8)
 
 plt.hlines(indices, 0, means[::-1], linestyles='dotted', linewidth=1.5)
-plt.hlines(indices, (means - stds)[::-1], (means + stds)[::-1], linewidth=2.5)
+plt.hlines(indices, (means - stds)[::-1], (means + stds)[::-1], linewidth=3.5)
 
-plt.yticks(range(19), RGI_NAMES[::-1], fontsize=20, horizontalalignment='left')
+plt.yticks(range(19), ['({n}) {name}'.format(n=19 - i, name=name) for
+                       i, name in enumerate(RGI_NAMES[::-1])], fontsize=20,
+           horizontalalignment='left')
 plt.xticks(fontsize=18)
 
 yax = ax.get_yaxis()
-yax.set_tick_params(pad=245)
+yax.set_tick_params(pad=275)
 
 ax.set_xlim([0, 0.020])
 ax.set_ylim([-1, 19])
 
-plt.xlabel('Normalized sensitivity to ELA (m$^{-1}$)', fontsize=22)
+plt.xlabel('Regional sensitivity to ELA (m$^{-1}$)', fontsize=22)
 
 fig = plt.gcf()
 fig.set_size_inches(12, 7)
