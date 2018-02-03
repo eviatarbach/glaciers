@@ -48,11 +48,11 @@ all_glaciers.loc[MISSING_REGIONS, 'area'] = all_glaciers['Area']
 all_glaciers.loc[MISSING_REGIONS, 'SLOPE_avg'] = all_glaciers['Slope']
 
 # Fill in null from RGI when missing from Huss data
-all_glaciers.loc[all_glaciers['SLOPE_avg'].isnull(), 'SLOPE_avg'] = all_glaciers['Slope']
-all_glaciers.loc[all_glaciers['area'].isnull(), 'area'] = all_glaciers['Area']
+all_glaciers.loc[all_glaciers['SLOPE_avg'].isnull(), 'SLOPE_avg'] = all_glaciers['Slope'][all_glaciers['SLOPE_avg'].isnull()]
+all_glaciers.loc[all_glaciers['area'].isnull(), 'area'] = all_glaciers['Area'][all_glaciers['area'].isnull()]
 
 # Fill in thickness
 all_glaciers.loc[all_glaciers['THICK_mean'].isnull(),
-                 'THICK_mean'] = all_glaciers['volume']/all_glaciers['area']
+                 'THICK_mean'] = (all_glaciers['volume']/all_glaciers['area'])[all_glaciers['THICK_mean'].isnull()]
 
 all_glaciers.to_pickle('data/serialized/all_glaciers')
