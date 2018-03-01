@@ -86,10 +86,6 @@ for i, region in enumerate(RGI_REGIONS):
         region_data['volume'] *= 1000**3
         region_data['LENGTH'] *= 1000
 
-        # lengths
-        region_data['length'] = (region_data['Zmax'] - region_data['Zmin']
-                                 - region_data['THICK_mean'])/region_data['SLOPE_avg']
-
         print(region)
         print('Total number in RGI:', len(region_data))
         print('Total area in RGI (km^2):', region_data['Area'].sum()/1000**2)
@@ -107,10 +103,6 @@ for i, region in enumerate(RGI_REGIONS):
         # drop glaciers that have no slope information
         region_data = region_data[~region_data['SLOPE_avg'].isnull()
                                   | ~region_data['Slope'].isnull()]
-
-        # drop glaciers with altitude range smaller than thickness
-        region_data = region_data[region_data['Zmax']
-                                  - region_data['Zmin'] > region_data['THICK_mean']]
 
         print('Total number included:', len(region_data))
         print('Total area included (km^2):', region_data['Area'].sum()/1000**2)

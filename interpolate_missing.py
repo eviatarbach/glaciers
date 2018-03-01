@@ -55,4 +55,8 @@ all_glaciers.loc[all_glaciers['area'].isnull(), 'area'] = all_glaciers['Area'][a
 all_glaciers.loc[all_glaciers['THICK_mean'].isnull(),
                  'THICK_mean'] = (all_glaciers['volume']/all_glaciers['area'])[all_glaciers['THICK_mean'].isnull()]
 
+# Drop glaciers with altitude range smaller than thickness
+all_glaciers = all_glaciers[all_glaciers['Zmax']
+                            - all_glaciers['Zmin'] > all_glaciers['THICK_mean']]
+
 all_glaciers.to_pickle('data/serialized/all_glaciers')

@@ -36,7 +36,8 @@ def run():
         volumes[interp_volume_mask] = unumpy.uarray(region['volume'][interp_volume_mask],
                                                     ERRS['vol_interp']*region['volume'][interp_volume_mask])
 
-        lengths = region['length']
+        lengths = (region['Zmax'] - region['Zmin']
+                   - region['THICK_mean'])/region['SLOPE_avg']
         lengths = unumpy.uarray(lengths, ERRS['length']*lengths)
 
         g_abl = unumpy.uarray(region['g_abl'].values, ERRS['g_abl'])
