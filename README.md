@@ -1,6 +1,6 @@
 # Code for "How sensitive are mountain glaciers to climate change? Insights from a block model"
 
-This repository contains the code for the paper "How sensitive are mountain glaciers to climate change? Insights from a block model" by Eviatar Bach, Valentina Radić, and Christian Schoof, 2018, to be published in the *Journal of Glaciology*.
+This repository contains the code for the paper ["How sensitive are mountain glaciers to climate change? Insights from a block model"](https://doi.org/10.1017/jog.2018.15) by Eviatar Bach, Valentina Radić, and Christian Schoof, 2018, published in the *Journal of Glaciology*.
 
 The code is for computing response times and sensitivity to equilibrium line altitude (ELA) changes for mountain glaciers worldwide, using a block model with volume–area–length scaling and a piecewise linear mass balance profile.
 
